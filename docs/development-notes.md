@@ -21,6 +21,8 @@ Working notes for continuing development. Architecture: `docs/architecture.md`. 
 | Trust packs by SHA-256 against the bundled manifest | Skips per-item zod validation at start-up (packs are validated at build time) and rejects truncated or tampered downloads. |
 | kuromoji (IPADIC) for readings at build time | Validation requires kana readings for examples, and Tatoeba sentences have none. Tokens of the target word use its dictionary reading. |
 | Extra practice excluded from check-in counters | User requirement. Only `scheduled`/`notification` sessions count (`promptedQuestionsToday`). Finishing a session no longer resets the desktop activity cycle; only a prompt does. |
+| "X% to NY" instead of a 0–100 score | All skills share one 0–10 difficulty scale; kana items top out at 1.7, so a perfect kana run showed ~47/100. Learners read that as failing. Progress is now shown within the next JLPT level (kana separately). User's design (2026-10-27). |
+| Habit-based resting mood, new "sad" sprite | User request: Mocchi should react to how regularly sessions are completed. Uses only session records (no extra tracking). |
 | Wrong-answer notes generated at question build time (`Question.choiceNotes`) | The engine knows which item each distractor came from. Notes are stripped from the UI copy by `publicQuestion()` and returned as `Feedback.whyWrong`. |
 
 ## Failed approaches and fixes worth remembering

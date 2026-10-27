@@ -378,6 +378,8 @@ export interface UserSettings {
   popupTakesFocus: boolean;
   maxDailyInterruptions: number;
   minMinutesBetweenInterruptions: number;
+  /** Also check in once this many hours pass without one, however few active minutes (0 = off). */
+  checkInEveryHours: number;
   launchAtStartup: boolean;
   characterVisible: boolean;
   desktopNotifications: boolean;
@@ -430,7 +432,8 @@ export type CharacterMood =
   | 'celebrating'
   | 'encouraging'
   | 'studying'
-  | 'waiting';
+  | 'waiting'
+  | 'sad';
 
 export interface Device {
   id: string;

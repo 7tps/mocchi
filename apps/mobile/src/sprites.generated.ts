@@ -122,4 +122,15 @@ export const SPRITE_SHEETS: Record<string, Record<string, number>> = {
     "lantern": require('../../../assets/character/cosmetics/mocchi_waiting_lantern.png'),
     "star-crown": require('../../../assets/character/cosmetics/mocchi_waiting_star-crown.png'),
   },
+  "sad": {
+    base: require('../../../assets/character/mocchi_sad.png'),
+    "sprout-bloom": require('../../../assets/character/cosmetics/mocchi_sad_sprout-bloom.png'),
+    "scarf": require('../../../assets/character/cosmetics/mocchi_sad_scarf.png'),
+    "hachimaki": require('../../../assets/character/cosmetics/mocchi_sad_hachimaki.png'),
+    "glasses": require('../../../assets/character/cosmetics/mocchi_sad_glasses.png'),
+    "sakura": require('../../../assets/character/cosmetics/mocchi_sad_sakura.png'),
+    "grad-cap": require('../../../assets/character/cosmetics/mocchi_sad_grad-cap.png'),
+    "lantern": require('../../../assets/character/cosmetics/mocchi_sad_lantern.png'),
+    "star-crown": require('../../../assets/character/cosmetics/mocchi_sad_star-crown.png'),
+  },
 };

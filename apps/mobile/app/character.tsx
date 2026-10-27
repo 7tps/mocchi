@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { COSMETICS, MILESTONES } from '@jc/learning-engine';
-import { t } from '@jc/design-system';
+import { habitLine, t } from '@jc/design-system';
 import { useAppState, useTutor } from '../src/service';
 import { useTheme, FONT_DISPLAY } from '../src/theme';
 import { Mocchi } from '../src/components/Mocchi';
@@ -16,7 +16,10 @@ export default function CharacterScreen() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
       <Panel theme={theme} style={{ alignItems: 'center', gap: 8 }}>
-        <Mocchi mood="happy" cosmetic={c.selectedCosmetic} size={160} animate={animate} />
+        <Mocchi mood={state.habit.mood} cosmetic={c.selectedCosmetic} size={160} animate={animate} />
+        <Body theme={theme} small style={{ textAlign: 'center' }}>
+          {habitLine(state.habit)}
+        </Body>
         <Title theme={theme}>{t('character.level', { level: state.level.level })}</Title>
         <View style={{ alignSelf: 'stretch' }}>
           <Meter theme={theme} value={state.level.into} max={state.level.needed} />

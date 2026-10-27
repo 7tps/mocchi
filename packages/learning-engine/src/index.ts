@@ -5,6 +5,8 @@ export * from './questions';
 export * from './answers';
 export * from './session';
 export * from './placement';
+export * from './levels';
+export * from './habit';
 export * from './scheduler';
 export * from './progression';
 export * from './stats';

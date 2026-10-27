@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CharacterMood } from '@jc/shared-types';
-import { lineFor, t } from '@jc/design-system';
-import { inQuietHours } from '@jc/learning-engine';
+import { habitLine, lineFor, t } from '@jc/design-system';
+import { inQuietHours, restingMood } from '@jc/learning-engine';
 import { api, desktop, onChanged } from './bridge';
 import { useAppState } from './hooks';
 import { Mocchi } from './components/Mocchi';
@@ -9,7 +9,7 @@ import { playSfx } from './audio';
 
 /** The small always-on-top character. Click: quiz. Drag: move. Right-click: menu. Double-click: open app. */
 export function WidgetApp() {
-  const { state } = useAppState();
+  const { state, refresh } = useAppState();
   const [due, setDue] = useState(0);
   const [mood, setMood] = useState<CharacterMood>('idle');
   const [bubble, setBubble] = useState<string | null>(null);
@@ -37,7 +37,11 @@ export function WidgetApp() {
         .then((q) => setDue(q.filter((e) => (e.nextReviewAt ?? Infinity) <= Date.now()).length))
         .catch(() => undefined);
     refreshDue();
-    const id = setInterval(refreshDue, 60_000);
+    // The habit mood changes with time too (a day without a session).
+    const id = setInterval(() => {
+      refreshDue();
+      refresh();
+    }, 60_000);
     const off = onChanged((reason) => {
       refreshDue();
       if (reason === 'session') flash('happy', 3500, lineFor('done', Date.now()).ja);
@@ -46,7 +50,7 @@ export function WidgetApp() {
       clearInterval(id);
       off();
     };
-  }, []);
+  }, [refresh]);
 
   useEffect(
     () =>
@@ -61,7 +65,7 @@ export function WidgetApp() {
   if (!state) return null;
   const paused = state.pause.indefinite || state.pause.until !== null;
   const quiet = inQuietHours(state.settings.quietHours, Date.now(), state.timeZone);
-  const shownMood: CharacterMood = mood !== 'idle' ? mood : paused || quiet ? 'sleepy' : due > 0 ? 'waiting' : 'idle';
+  const shownMood: CharacterMood = mood !== 'idle' ? mood : restingMood(state.habit, { paused, quiet, due });
   const animate = state.settings.characterAnimation && !state.settings.reducedMotion;
 
   return (
@@ -69,7 +73,8 @@ export function WidgetApp() {
       className="widget"
       role="button"
       tabIndex={0}
-      aria-label={`${t('app.name')}: ${due > 0 ? t('home.due', { n: due }) : t('tray.start')}`}
+      aria-label={`${t('app.name')}: ${due > 0 ? t('home.due', { n: due }) : t('tray.start')}. ${habitLine(state.habit)}`}
+      title={habitLine(state.habit)}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
         // Capture so the release is seen even if the cursor outruns the window; otherwise it would keep following the mouse.

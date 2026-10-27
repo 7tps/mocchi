@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { Feedback, PlacementView } from '@jc/app-core';
 import type { AnswerMeta, CharacterMood, ExperienceLevel, PlacementResult } from '@jc/shared-types';
-import { SKILL_LABELS, t, type Theme } from '@jc/design-system';
+import { SKILL_LABELS, levelLabel, t, type Theme } from '@jc/design-system';
+import { jlptProgress } from '@jc/learning-engine';
 import { useTutor } from '../service';
 import { QuestionView } from './Quiz';
 import { Body, Button, Meter, Tag, Title } from './ui';
@@ -19,6 +20,9 @@ export function PlacementResultView({ theme, result }: { theme: Theme; result: P
       <Body theme={theme} dim small>
         {t('onboard.results.approx')}
       </Body>
+      <Body theme={theme} small>
+        {t('level.overall')}: {levelLabel(jlptProgress(result.overallAbility))}
+      </Body>
       {result.categories.map((c) => (
         <View key={c.skill} style={{ gap: 4 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -26,10 +30,10 @@ export function PlacementResultView({ theme, result }: { theme: Theme; result: P
               {SKILL_LABELS[c.skill]}
             </Body>
             <Body theme={theme} small dim>
-              {c.correct}/{c.asked}
+              {levelLabel(jlptProgress(c.ability, c.skill))} · {t('onboard.results.correct', { correct: c.correct, asked: c.asked })}
             </Body>
           </View>
-          <Meter theme={theme} value={c.score} max={100} />
+          <Meter theme={theme} value={jlptProgress(c.ability, c.skill).percent} max={100} />
           {c.kanjiBlocked ? (
             <Body theme={theme} dim small>
               {t('onboard.results.kanjiBlocked')}

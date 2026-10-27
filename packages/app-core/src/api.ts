@@ -17,7 +17,7 @@ import type {
   UserProfile,
   UserSettings,
 } from '@jc/shared-types';
-import type { DashboardStats } from '@jc/learning-engine';
+import type { DashboardStats, Habit } from '@jc/learning-engine';
 
 /** Question as sent to the UI: answers stay in the service until submitted. */
 export type PublicQuestion = Omit<Question, 'answer' | 'accepted' | 'explanation' | 'example' | 'choiceNotes'>;
@@ -34,6 +34,8 @@ export interface AppState {
   profile: UserProfile | null;
   settings: UserSettings;
   character: CharacterProgress;
+  /** How regularly sessions are completed; sets Mocchi's resting mood. */
+  habit: Habit;
   level: LevelInfo;
   pause: PauseState;
   snoozeUntil: number | null;

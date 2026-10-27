@@ -34,12 +34,12 @@ export const C = {
 } as const;
 
 export const MOODS: CharacterMood[] = [
-  'idle', 'blink', 'happy', 'thinking', 'curious', 'confused', 'sleepy', 'celebrating', 'encouraging', 'studying', 'waiting',
+  'idle', 'blink', 'happy', 'thinking', 'curious', 'confused', 'sleepy', 'celebrating', 'encouraging', 'studying', 'waiting', 'sad',
 ];
 
 type Eyes = 'open' | 'closed' | 'happy' | 'wide' | 'sleepy' | 'up' | 'down' | 'left' | 'right';
-type Mouth = 'smile' | 'open' | 'flat' | 'wavy' | 'o' | 'grin';
-type Extra = 'sparkle' | 'dots1' | 'dots2' | 'dots3' | 'question' | 'bang' | 'sweat' | 'z1' | 'z2' | 'confetti1' | 'confetti2' | 'heart' | 'book' | 'bookFlip' | 'armsUp' | 'armWave';
+type Mouth = 'smile' | 'open' | 'flat' | 'wavy' | 'o' | 'grin' | 'frown';
+type Extra = 'sparkle' | 'dots1' | 'dots2' | 'dots3' | 'question' | 'bang' | 'sweat' | 'z1' | 'z2' | 'confetti1' | 'confetti2' | 'heart' | 'book' | 'bookFlip' | 'armsUp' | 'armWave' | 'tear1' | 'tear2';
 
 interface FrameSpec {
   dy: number;
@@ -69,6 +69,7 @@ export const ANIMATIONS: Record<CharacterMood, Animation> = {
   celebrating: { frameMs: 140, loop: true, frames: [f(0, 2, 'happy', 'open', ['confetti1']), f(-4, -2, 'happy', 'open', ['armsUp', 'confetti2']), f(-5, -2, 'happy', 'open', ['armsUp', 'confetti1']), f(-2, 0, 'happy', 'open', ['confetti2'])] },
   encouraging: { frameMs: 240, loop: true, frames: [f(0, 0, 'happy', 'smile', ['heart']), f(-1, 0, 'happy', 'smile', ['armWave', 'heart']), f(0, 1, 'happy', 'smile', ['armWave']), f(0, 0, 'happy', 'smile', ['heart'])] },
   studying: { frameMs: 420, loop: true, frames: [f(0, 0, 'down', 'flat', ['book']), f(0, 1, 'down', 'flat', ['book']), f(0, 0, 'down', 'smile', ['bookFlip']), f(0, 0, 'down', 'flat', ['book'])] },
+  sad: { frameMs: 480, loop: true, frames: [f(0, 1, 'down', 'frown', ['tear1'], false), f(0, 2, 'down', 'frown', ['tear2'], false), f(0, 1, 'down', 'frown', [], false), f(0, 1, 'down', 'frown', [], false)] },
   waiting: { frameMs: 360, loop: true, frames: [f(0, 0, 'left', 'smile', ['dots1']), f(0, 0, 'open', 'smile', ['dots2']), f(0, 1, 'right', 'smile', ['dots3']), f(0, 0, 'open', 'smile', ['dots3'])] },
 };
 
@@ -212,6 +213,7 @@ function drawFace(fr: Frame, b: Body, spec: FrameSpec): void {
     case 'flat': pixels(fr, mx, my + 1, ['II'], { I }); break;
     case 'wavy': pixels(fr, mx - 1, my, ['.I.I', 'I.I.'], { I }); break;
     case 'o': pixels(fr, mx, my, ['II', 'II'], { I }); break;
+    case 'frown': pixels(fr, mx - 1, my + 1, ['.II.', 'I..I'], { I }); break;
   }
 }
 
@@ -243,6 +245,8 @@ function drawExtras(fr: Frame, b: Body, extras: Extra[]): void {
         pixels(fr, left - 2, Math.round(b.cy - 4), ['I.', 'BI', 'BI'], { I, B: C.body });
         pixels(fr, right + 1, Math.round(b.cy - 4), ['.I', 'IB', 'IB'], { I, B: C.body });
         break;
+      case 'tear1': pixels(fr, Math.round(b.cx - 5), Math.round(b.cy + 1), ['B'], { B: C.blue }); break;
+      case 'tear2': pixels(fr, Math.round(b.cx - 5), Math.round(b.cy + 2), ['B', 'B'], { B: C.blue }); break;
       case 'armWave': pixels(fr, right, Math.round(b.cy - 3), ['.II', 'IBI', 'II.'], { I, B: C.body }); break;
       case 'book':
       case 'bookFlip': {

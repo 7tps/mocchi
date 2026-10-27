@@ -88,6 +88,20 @@ export const en = {
   'onboard.exam.done': 'Exam complete!',
   'onboard.exam.seeResults': 'See my results',
   'onboard.results.kanjiBlocked': 'not measured — the kanji got in the way',
+  'onboard.results.correct': '{correct}/{asked} right',
+  'habit.new': 'Nice to meet you! Let’s learn together.',
+  'habit.thriving': 'Mocchi is thrilled: you studied on {days} of the last 7 days!',
+  'habit.steady': 'Mocchi is happy you stopped by.',
+  'habit.skipping': 'Mocchi feels left out: {n} check-ins closed without a session.',
+  'habit.missed': 'Mocchi has been waiting for you.',
+  'habit.away': 'Mocchi misses you: {days} days without a session.',
+  'level.overall': 'Overall',
+  'level.progress': '{percent}% to {level}',
+  'level.n1Mastered': 'N1 mastered',
+  'level.kanaProgress': '{percent}% learned',
+  'level.kanaMastered': 'Mastered',
+  'level.recent': '{percent}% recent',
+  'level.notPracticed': 'not practiced yet',
   'settings.interruptionsHint': 'Sessions you start by clicking Mocchi are extra practice and never count toward these limits.',
   'quiz.skippedKanji': 'Skipped — kanji',
   'quiz.dontKnow': 'I don’t know',
@@ -183,6 +197,9 @@ export const en = {
   'settings.popup': 'Show quiz pop-ups',
   'settings.interval': 'Check in after (active minutes)',
   'settings.maxDaily': 'Max interruptions per day',
+  'settings.everyHours': 'Also check in every (hours)',
+  'settings.everyHoursHint': 'Whichever comes first: the active minutes above, or this many hours since the last check-in. Quiet hours, pauses and the daily limit still apply.',
+  'settings.off': 'Off',
   'settings.minGap': 'Minimum minutes between interruptions',
   'settings.focus': 'Pop-up takes keyboard focus',
   'settings.focusHint': 'Off: the quiz appears without interrupting your typing; click it to answer.',
@@ -293,6 +310,22 @@ export function t(key: StringKey, vars?: Record<string, string | number>): strin
   let s: string = current[key] ?? en[key] ?? key;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
+}
+
+/** One line about Mocchi's mood, from `assessHabit` in the engine. */
+export function habitLine(h: { state: 'new' | 'thriving' | 'steady' | 'skipping' | 'missed' | 'away'; activeDays: number; skippedCheckIns: number; daysAway: number }): string {
+  switch (h.state) {
+    case 'thriving': return t('habit.thriving', { days: h.activeDays });
+    case 'skipping': return t('habit.skipping', { n: h.skippedCheckIns });
+    case 'away': return t('habit.away', { days: h.daysAway });
+    default: return t(`habit.${h.state}`);
+  }
+}
+
+/** "67% to N4", "Mastered" (kana), "N1 mastered": see `jlptProgress` in the engine. */
+export function levelLabel(p: { level: string; percent: number; mastered: boolean; kana: boolean }): string {
+  if (p.kana) return p.mastered ? t('level.kanaMastered') : t('level.kanaProgress', { percent: p.percent });
+  return p.mastered ? t('level.n1Mastered') : t('level.progress', { percent: p.percent, level: p.level });
 }
 
 export const SKILL_LABELS: Record<Skill, string> = {

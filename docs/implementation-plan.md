@@ -6,7 +6,7 @@ Last updated: 2026-10-27. See also `CLAUDE.md` (architecture, commands, conventi
 
 - **Phase:** pre-release (phase 7). JLPT N5–N1 level packs and the Windows installer with a level picker are built (phase 8, below).
 - **Git:** `main` on `origin` (7tps/mocchi); level packs, installer and desktop fixes are in `e2c45e7`.
-- **Checks:** `npm run check` passes (lint, typecheck of 10 workspaces, 130 tests). `npm run package:win` builds `Mocchi-Setup-0.1.0.exe`.
+- **Checks:** `npm run check` passes (lint, typecheck of 10 workspaces, 141 tests). `npm run package:win` builds `Mocchi-Setup-0.1.0.exe`.
 - **Content release:** `content-2026.10.1` is published on 7tps/mocchi (2026-10-27). A silent install of the release installer with `/LEVEL=N2` downloaded N4–N2 from it with matching checksums.
 - **Exact next task:** click through the interactive installer once (the level page has been compiled but not seen). After that: more level grammar (see "Unfinished").
 

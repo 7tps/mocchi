@@ -1,6 +1,7 @@
 import { ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
-import { SKILL_LABELS, lineFor, t } from '@jc/design-system';
+import { SKILL_LABELS, habitLine, levelLabel, lineFor, t } from '@jc/design-system';
+import { jlptProgress, restingMood } from '@jc/learning-engine';
 import { useAppState, useLoad, useTutor } from '../../src/service';
 import { useTheme } from '../../src/theme';
 import { Mocchi } from '../../src/components/Mocchi';
@@ -19,9 +20,12 @@ export default function Home() {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
       <Panel theme={theme} style={{ alignItems: 'center', gap: 10 }}>
-        <Mocchi mood={paused ? 'sleepy' : s.dueNow > 0 ? 'waiting' : 'happy'} cosmetic={state.character.selectedCosmetic} size={128} animate={animate} />
+        <Mocchi mood={restingMood(state.habit, { paused, due: s.dueNow })} cosmetic={state.character.selectedCosmetic} size={128} animate={animate} />
         <Body theme={theme} ja>
           {lineFor('greet', s.questionsAnswered).ja}
+        </Body>
+        <Body theme={theme} small style={{ textAlign: 'center' }}>
+          {habitLine(state.habit)}
         </Body>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
           <Tag theme={theme} label={t('home.streak', { n: s.streakDays })} />
@@ -91,12 +95,13 @@ export default function Home() {
         </Title>
         {data.weakest.map((sk) => {
           const est = s.skills.find((x) => x.skill === sk);
+          const p = jlptProgress(est?.ability ?? 0, sk);
           return (
             <View key={sk} style={{ gap: 4 }}>
               <Body theme={theme} small>
-                {SKILL_LABELS[sk]}
+                {SKILL_LABELS[sk]} · {levelLabel(p)}
               </Body>
-              <Meter theme={theme} value={Math.max(0, est?.ability ?? 0)} max={10} />
+              <Meter theme={theme} value={p.percent} max={100} />
             </View>
           );
         })}

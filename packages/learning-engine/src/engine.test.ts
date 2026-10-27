@@ -335,6 +335,25 @@ describe('desktop scheduler', () => {
     expect(d.nextCheckAt).toBeGreaterThanOrEqual(T0);
   });
 
+  it('checks in every X hours even without enough active minutes', () => {
+    const settings = { ...base.settings, checkInEveryHours: 3 };
+    const quiet = { ...base, settings, activeMinutes: 5, appStartedAt: T0 - 5 * HOUR };
+    const waiting = decideDesktopPrompt({ ...quiet, lastPromptAt: T0 - 2 * HOUR });
+    expect(waiting.show).toBe(false);
+    expect(waiting.reason).toMatch(/3 h after the last/);
+    expect(waiting.nextCheckAt).toBeLessThanOrEqual(T0 + HOUR);
+    const due = decideDesktopPrompt({ ...quiet, lastPromptAt: T0 - 3 * HOUR });
+    expect(due.show).toBe(true);
+    expect(due.reason).toMatch(/3 hours since the last check-in/);
+    // No check-in yet: counted from app start.
+    expect(decideDesktopPrompt({ ...quiet, lastPromptAt: null, appStartedAt: T0 - 3 * HOUR }).show).toBe(true);
+    expect(decideDesktopPrompt({ ...quiet, lastPromptAt: null, appStartedAt: T0 - HOUR }).show).toBe(false);
+    // Off, or other limits still apply.
+    expect(decideDesktopPrompt({ ...quiet, lastPromptAt: T0 - 5 * HOUR, settings: { ...settings, checkInEveryHours: 0 } }).show).toBe(false);
+    expect(decideDesktopPrompt({ ...quiet, lastPromptAt: T0 - 5 * HOUR, idle: true }).show).toBe(false);
+    expect(decideDesktopPrompt({ ...quiet, lastPromptAt: T0 - 5 * HOUR, promptsToday: 8 }).show).toBe(false);
+  });
+
   it('respects quiet hours across midnight in the user timezone', () => {
     const lateTokyo = localTimeToTs('2026-10-26', 23 * 60, 'Asia/Tokyo');
     const d = decideDesktopPrompt({ ...base, now: lateTokyo });

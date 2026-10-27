@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AppState, LibraryEntry, LibraryFilter } from '@jc/app-core';
-import { SKILL_LABELS, relativeTime, t } from '@jc/design-system';
+import { SKILL_LABELS, levelLabel, relativeTime, t } from '@jc/design-system';
+import { jlptProgress } from '@jc/learning-engine';
 import { api } from '../bridge';
 import { useLoad } from '../hooks';
 import { Meter, Stat } from '../components/ui';
@@ -60,17 +61,20 @@ export function Progress() {
         <div className="grid two">
           {s.skills
             .filter((k) => k.evidence > 0 || k.ability > 0.5)
-            .map((k) => (
-              <div key={k.skill}>
-                <div className="row spread small">
-                  <span>{SKILL_LABELS[k.skill]}</span>
-                  <span className="dim">
-                    {k.ability.toFixed(1)} / 10 · {Math.round(k.recentAccuracy * 100)}%
-                  </span>
+            .map((k) => {
+              const p = jlptProgress(k.ability, k.skill);
+              return (
+                <div key={k.skill}>
+                  <div className="row spread small">
+                    <span>{SKILL_LABELS[k.skill]}</span>
+                    <span>
+                      {levelLabel(p)} <span className="dim">· {t('level.recent', { percent: Math.round(k.recentAccuracy * 100) })}</span>
+                    </span>
+                  </div>
+                  <Meter value={p.percent} max={100} label={SKILL_LABELS[k.skill]} variant="teal" />
                 </div>
-                <Meter value={Math.max(0, k.ability)} max={10} label={SKILL_LABELS[k.skill]} variant="teal" />
-              </div>
-            ))}
+              );
+            })}
         </div>
       </section>
     </div>

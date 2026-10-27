@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CharacterMood, PlacementResult, SessionType } from '@jc/shared-types';
-import { SKILL_LABELS, t } from '@jc/design-system';
+import { SKILL_LABELS, levelLabel, t } from '@jc/design-system';
+import { jlptProgress } from '@jc/learning-engine';
 import type { SnoozeKind } from '@jc/app-core';
 import { api, desktop } from './bridge';
 import { useAppState } from './hooks';
@@ -21,6 +22,7 @@ function sourceFromHash(): SessionType {
 /** Short result card shown in the pop-up when the placement exam ends. */
 function ExamDone({ result, onboarded, onClose }: { result: PlacementResult; onboarded: boolean; onClose: () => void }) {
   const band = result.band === 'pre-N5' ? 'Pre-N5' : `${result.bandConfident ? '' : '≈ '}${result.band}`;
+  const overall = jlptProgress(result.overallAbility);
   return (
     <div className="stack" aria-live="polite">
       <h2 className="display" style={{ margin: 0 }}>
@@ -32,7 +34,8 @@ function ExamDone({ result, onboarded, onClose }: { result: PlacementResult; onb
           {band}
         </span>
       </div>
-      <Meter value={result.overallScore} max={100} label="Overall" />
+      <div className="small dim">{levelLabel(overall)}</div>
+      <Meter value={overall.percent} max={100} label={t('level.overall')} />
       {result.strengths.length ? <div className="small">{t('onboard.results.strengths')}: {result.strengths.map((s) => SKILL_LABELS[s]).join(', ')}</div> : null}
       {result.weaknesses.length ? <div className="small">{t('onboard.results.weaknesses')}: {result.weaknesses.map((s) => SKILL_LABELS[s]).join(', ')}</div> : null}
       <button type="button" className="btn primary" autoFocus onClick={onClose}>

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { AppState } from '@jc/app-core';
 import type { CharacterMood } from '@jc/shared-types';
-import { SKILL_LABELS, lineFor, relativeTime, t } from '@jc/design-system';
+import { SKILL_LABELS, habitLine, levelLabel, lineFor, relativeTime, t } from '@jc/design-system';
+import { jlptProgress, restingMood } from '@jc/learning-engine';
 import { api } from '../bridge';
 import { useLoad } from '../hooks';
 import { Mocchi } from '../components/Mocchi';
@@ -21,7 +22,7 @@ export function Home({ state, go }: { state: AppState; go: (route: string) => vo
   return (
     <div className="stack" style={{ gap: 20 }}>
       <section className="panel hero">
-        <Mocchi mood={paused ? 'sleepy' : s.dueNow > 0 ? 'waiting' : 'happy'} cosmetic={state.character.selectedCosmetic} scale={4} animate={animate} />
+        <Mocchi mood={restingMood(state.habit, { paused, due: s.dueNow })} cosmetic={state.character.selectedCosmetic} scale={4} animate={animate} />
         <div className="stack">
           <div>
             <h1 style={{ margin: 0 }}>
@@ -31,6 +32,7 @@ export function Home({ state, go }: { state: AppState; go: (route: string) => vo
             <div className="jp dim" lang="ja">
               {lineFor('greet', s.questionsAnswered).ja}
             </div>
+            <div className="small">{habitLine(state.habit)}</div>
           </div>
           <div className="row">
             <span className="tag">
@@ -101,13 +103,16 @@ export function Home({ state, go }: { state: AppState; go: (route: string) => vo
           <div className="stack">
             {data.weakest.map((sk) => {
               const est = s.skills.find((x) => x.skill === sk);
+              const p = jlptProgress(est?.ability ?? 0, sk);
               return (
                 <div key={sk}>
                   <div className="row spread small">
                     <span>{SKILL_LABELS[sk]}</span>
-                    <span className="dim">{est && est.evidence > 0 ? `${Math.round(est.recentAccuracy * 100)}% recent` : 'not practiced yet'}</span>
+                    <span className="dim">
+                      {levelLabel(p)} · {est && est.evidence > 0 ? t('level.recent', { percent: Math.round(est.recentAccuracy * 100) }) : t('level.notPracticed')}
+                    </span>
                   </div>
-                  <Meter value={Math.max(0, est?.ability ?? 0)} max={10} label={SKILL_LABELS[sk]} />
+                  <Meter value={p.percent} max={100} label={SKILL_LABELS[sk]} />
                 </div>
               );
             })}

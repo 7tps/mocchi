@@ -32,6 +32,7 @@ import {
 import {
   answerPlacement as engineAnswerPlacement,
   applyReview,
+  assessHabit,
   bandForAbility,
   beginnerPlacement,
   checkAnswer,
@@ -66,6 +67,7 @@ import {
   xpForSession,
   isPaused,
   COSMETICS,
+  type Habit,
   type PlacementState,
   type PlannedQuestion,
 } from '@jc/learning-engine';
@@ -256,6 +258,7 @@ export class TutorService implements TutorApi {
       profile: this.profile,
       settings: this.settings,
       character: this.character,
+      habit: await this.habit(),
       level: levelProgress(this.character.xp),
       pause: this.effectivePause(),
       snoozeUntil: this.snoozeUntil && this.snoozeUntil > this.now() ? this.snoozeUntil : null,
@@ -266,6 +269,18 @@ export class TutorService implements TutorApi {
       platform: this.platform,
       listeningAvailable: this.listening,
     };
+  }
+
+  private async habit(): Promise<Habit> {
+    const now = this.now();
+    const goal = this.settings.dailyGoalQuestions;
+    return assessHabit({
+      now,
+      timeZone: this.tz(),
+      sessions: await this.store.getSessions({ since: now - 8 * DAY }),
+      onboardedAt: this.profile?.onboardedAt,
+      goalReachedToday: goal > 0 && (await this.questionsOn(this.today())) >= goal,
+    });
   }
 
   private effectivePause(): PauseState {

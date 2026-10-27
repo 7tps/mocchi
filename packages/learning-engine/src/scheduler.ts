@@ -1,6 +1,7 @@
 import type { PauseState, QuietHours, ScheduledOpportunity, SchedulerDecision, UserSettings } from '@jc/shared-types';
 import {
   DAY,
+  HOUR,
   MINUTE,
   addDaysToKey,
   createRng,
@@ -52,7 +53,8 @@ export interface DesktopSchedulerInput {
   settings: Pick<
     UserSettings,
     'quietHours' | 'dailyGoalQuestions' | 'maxDailyInterruptions' | 'minMinutesBetweenInterruptions' | 'popupIntervalMinMinutes' | 'popupIntervalMaxMinutes'
-  >;
+  > &
+    Partial<Pick<UserSettings, 'checkInEveryHours'>>;
   pause: PauseState;
   snoozeUntil: number | null;
   appStartedAt: number;
@@ -101,15 +103,22 @@ export function decideDesktopPrompt(i: DesktopSchedulerInput): SchedulerDecision
   if (i.dueCount === 0 && !i.newAvailable) {
     return { show: false, reason: 'Nothing useful to review right now.', nextCheckAt: i.now + 15 * MINUTE };
   }
-  if (i.activeMinutes < i.targetActiveMinutes) {
+  // Two triggers, whichever comes first: enough active minutes, or too long since the last check-in.
+  const everyMs = (i.settings.checkInEveryHours ?? 0) * HOUR;
+  const since = Math.max(i.lastPromptAt ?? 0, i.appStartedAt);
+  const overdue = everyMs > 0 && i.now - since >= everyMs;
+  if (i.activeMinutes < i.targetActiveMinutes && !overdue) {
     const remaining = i.targetActiveMinutes - i.activeMinutes;
-    return { show: false, reason: `Waiting for ${Math.ceil(remaining)} more active minutes.`, nextCheckAt: i.now + Math.min(remaining, 5) * MINUTE };
+    const untilOverdue = everyMs > 0 ? since + everyMs - i.now : Infinity;
+    const hours = everyMs > 0 ? ` (or a check-in at ${formatMinutes(minutesOfDay(since + everyMs, i.timeZone))}, ${i.settings.checkInEveryHours} h after the last)` : '';
+    return { show: false, reason: `Waiting for ${Math.ceil(remaining)} more active minutes${hours}.`, nextCheckAt: i.now + Math.min(remaining * MINUTE, 5 * MINUTE, untilOverdue) };
   }
   if (i.idle) {
     return { show: false, reason: 'You seem to be away — will check in when you are back.', nextCheckAt: soon };
   }
   const what = i.dueCount > 0 ? `${i.dueCount} review${i.dueCount === 1 ? '' : 's'} due` : 'Something new to learn';
-  return { show: true, reason: `${what} · ${Math.round(i.activeMinutes)} active minutes since the last check-in.`, nextCheckAt: i.now + i.settings.minMinutesBetweenInterruptions * MINUTE };
+  const why = i.activeMinutes >= i.targetActiveMinutes ? `${Math.round(i.activeMinutes)} active minutes since the last check-in` : `${i.settings.checkInEveryHours} hours since the last check-in`;
+  return { show: true, reason: `${what} · ${why}.`, nextCheckAt: i.now + i.settings.minMinutesBetweenInterruptions * MINUTE };
 }
 
 // ---------------------------------------------------------------------------

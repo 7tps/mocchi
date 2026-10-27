@@ -1,5 +1,6 @@
 import { ScrollView, View } from 'react-native';
-import { SKILL_LABELS, t } from '@jc/design-system';
+import { SKILL_LABELS, levelLabel, t } from '@jc/design-system';
+import { jlptProgress } from '@jc/learning-engine';
 import { useAppState, useLoad } from '../../src/service';
 import { useTheme } from '../../src/theme';
 import { Body, Meter, Panel, Title } from '../../src/components/ui';
@@ -78,9 +79,9 @@ export default function Progress() {
           .map((k) => (
             <View key={k.skill} style={{ gap: 4 }}>
               <Body theme={theme} small>
-                {SKILL_LABELS[k.skill]} · {k.ability.toFixed(1)}/10
+                {SKILL_LABELS[k.skill]} · {levelLabel(jlptProgress(k.ability, k.skill))}
               </Body>
-              <Meter theme={theme} value={Math.max(0, k.ability)} max={10} />
+              <Meter theme={theme} value={jlptProgress(k.ability, k.skill).percent} max={100} />
             </View>
           ))}
       </Panel>

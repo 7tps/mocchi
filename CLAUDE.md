@@ -61,6 +61,9 @@ Run electron-vite only via the workspace scripts (running it from the repo root 
 - Items left unanswered when a pop-up is closed are skipped by *check-ins* for 30 minutes each (`recentDismissed` meta, per-item timestamps); sessions the learner starts always include due reviews, so the widget's due badge can be cleared.
 - The character's right-click menu is app-drawn (`#/menu`, `MenuApp.tsx`, its own window sized by `desktop:menu-ready`, closed on blur/Esc/selection); the tray menu stays native. Keep their items in step (`buildMenu` in `main/index.ts`).
 - The main window is frameless on Windows/Linux (`hiddenInset` on macOS) with an app-drawn title bar (`components/TitleBar.tsx`, buttons via `desktop:window-control`). Full-height layouts must subtract `--titlebar-h`.
+- Desktop check-ins trigger on whichever comes first: the randomised active-minute target, or `checkInEveryHours` (default 3, 0 = off) since the last check-in (or app start). Pause, snooze, quiet hours, the daily cap, the goal and idle still block both.
+- Mocchi's resting mood comes from `assessHabit` (engine `habit.ts`, exposed as `AppState.habit`) via `restingMood`: thriving → happy, steady → idle, 1–3 days away → waiting, 3+ days away or ≥2 check-ins closed unfinished since the last finished session → sad. Pause/quiet hours → sleepy. Momentary moods (answers, prompts) override it.
+- Skill scores are shown as "X% to NY" (`jlptProgress` in engine `levels.ts`, `levelLabel` in i18n): progress through the next JLPT level not yet mastered. Kana are shown as "% learned"/"Mastered" (mastered at ability 2.6), never on the JLPT ladder.
 - Quiz pop-up appears with `showInactive()` unless `popupTakesFocus`; it must always be closable (✕, Esc, snooze).
 - Placement exam on desktop runs in the corner pop-up (`#/quiz?mode=placement`), not the main window.
 - Kanji knowledge is scored separately: reading reveals / "can't read the kanji" penalise only the kanji skill.

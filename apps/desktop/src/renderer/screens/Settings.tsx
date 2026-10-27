@@ -78,6 +78,17 @@ export function Settings({ state }: { state: AppState }) {
           format={(v) => `${v}–${s.popupIntervalMaxMinutes}`}
           onChange={(v) => set({ popupIntervalMinMinutes: v, popupIntervalMaxMinutes: Math.max(v + 10, s.popupIntervalMaxMinutes + (v - s.popupIntervalMinMinutes)) })}
         />
+        <Stepper
+          label={t('settings.everyHours')}
+          value={s.checkInEveryHours}
+          min={0}
+          max={12}
+          format={(v) => (v === 0 ? t('settings.off') : `${v}`)}
+          onChange={(v) => set({ checkInEveryHours: v })}
+        />
+        <p className="faint small" style={{ margin: 0 }}>
+          {t('settings.everyHoursHint')}
+        </p>
         <Stepper label={t('settings.maxDaily')} value={s.maxDailyInterruptions} min={1} max={30} onChange={(v) => set({ maxDailyInterruptions: v })} />
         <Stepper label={t('settings.minGap')} value={s.minMinutesBetweenInterruptions} min={5} max={240} step={5} onChange={(v) => set({ minMinutesBetweenInterruptions: v })} />
         <Toggle label={t('settings.focus')} hint={t('settings.focusHint')} checked={s.popupTakesFocus} onChange={(v) => set({ popupTakesFocus: v })} />
@@ -353,7 +364,7 @@ export function CharacterScreen({ state }: { state: AppState }) {
   const [preview, setPreview] = useState<CharacterMood>('happy');
   const c = state.character;
   const animate = state.settings.characterAnimation && !state.settings.reducedMotion;
-  const moods: CharacterMood[] = ['idle', 'happy', 'thinking', 'curious', 'confused', 'sleepy', 'celebrating', 'encouraging', 'studying', 'waiting'];
+  const moods: CharacterMood[] = ['idle', 'happy', 'thinking', 'curious', 'confused', 'sleepy', 'celebrating', 'encouraging', 'studying', 'waiting', 'sad'];
   return (
     <div className="stack" style={{ gap: 20 }}>
       <h1>{t('character.title')}</h1>

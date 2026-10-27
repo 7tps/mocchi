@@ -56,6 +56,11 @@
       "frames": 4,
       "frameMs": 360,
       "loop": true
+    },
+    "sad": {
+      "frames": 4,
+      "frameMs": 480,
+      "loop": true
     }
   }
 }

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AppState, Feedback, PlacementView } from '@jc/app-core';
 import type { AnswerMeta, CharacterMood, ExperienceLevel, PlacementResult, UserSettings } from '@jc/shared-types';
-import { SKILL_LABELS, t, type StringKey } from '@jc/design-system';
+import { SKILL_LABELS, levelLabel, t, type StringKey } from '@jc/design-system';
+import { jlptProgress } from '@jc/learning-engine';
 import { api, desktop } from '../bridge';
 import { Mocchi } from '../components/Mocchi';
 import { QuestionCard } from '../components/QuestionCard';
@@ -88,6 +89,7 @@ export function PlacementResults({ result }: { result: PlacementResult }) {
   const known = result.knownKana.filter((k) => /[ぁ-ゖ]/.test(k));
   const knownKata = result.knownKana.filter((k) => /[ァ-ヶ]/.test(k));
   const band = result.band === 'pre-N5' ? 'Pre-N5 (starting out)' : `${result.bandConfident ? '' : '≈ '}${result.band}`;
+  const overall = jlptProgress(result.overallAbility);
   return (
     <div className="stack">
       <div className="row spread">
@@ -98,26 +100,31 @@ export function PlacementResults({ result }: { result: PlacementResult }) {
           </div>
         </div>
         <div style={{ minWidth: 160 }}>
-          <div className="dim small">Overall {result.overallScore}/100</div>
-          <Meter value={result.overallScore} max={100} label="Overall" />
+          <div className="dim small">
+            {t('level.overall')}: {levelLabel(overall)}
+          </div>
+          <Meter value={overall.percent} max={100} label={t('level.overall')} />
         </div>
       </div>
       <p className="faint small" style={{ margin: 0 }}>
         {t('onboard.results.approx')}
       </p>
       <div className="grid two">
-        {result.categories.map((c) => (
+        {result.categories.map((c) => {
+          const p = jlptProgress(c.ability, c.skill);
+          return (
           <div key={c.skill}>
             <div className="row spread small">
               <span>{SKILL_LABELS[c.skill]}</span>
-              <span className="dim">
-                {c.correct}/{c.asked} · {c.score}
+              <span>
+                {levelLabel(p)} <span className="faint">· {t('onboard.results.correct', { correct: c.correct, asked: c.asked })}</span>
               </span>
             </div>
-            <Meter value={c.score} max={100} variant="teal" label={SKILL_LABELS[c.skill]} />
+            <Meter value={p.percent} max={100} variant="teal" label={SKILL_LABELS[c.skill]} />
             {c.kanjiBlocked ? <span className="faint small">{t('onboard.results.kanjiBlocked')}</span> : null}
           </div>
-        ))}
+          );
+        })}
       </div>
       {result.strengths.length ? (
         <div>

@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Mocchi",
+    "slug": "mocchi-japanese-companion",
+    "scheme": "mocchi",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "../../assets/ui/icon-1024.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#10162a",
+    "splash": { "image": "../../assets/ui/icon-1024.png", "resizeMode": "contain", "backgroundColor": "#10162a" },
+    "ios": {
+      "bundleIdentifier": "app.mocchi.companion",
+      "supportsTablet": true,
+      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+    },
+    "android": {
+      "package": "app.mocchi.companion",
+      "adaptiveIcon": { "foregroundImage": "../../assets/ui/icon-adaptive-fg.png", "backgroundColor": "#161e37" },
+      "permissions": ["POST_NOTIFICATIONS", "SCHEDULE_EXACT_ALARM"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-secure-store",
+      ["expo-notifications", { "icon": "../../assets/ui/tray-64.png", "color": "#7fd3a8" }],
+      ["expo-font", { "fonts": ["../../node_modules/@expo-google-fonts/dotgothic16/400Regular/DotGothic16_400Regular.ttf"] }]
+    ],
+    "experiments": { "typedRoutes": false }
+  }
+}

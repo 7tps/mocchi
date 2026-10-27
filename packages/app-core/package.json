@@ -1,0 +1,22 @@
+{
+  "name": "@jc/app-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node-sqlite": "./src/node-sqlite.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@jc/shared-types": "*",
+    "@jc/shared-utils": "*",
+    "@jc/japanese-content": "*",
+    "@jc/learning-engine": "*",
+    "@jc/design-system": "*"
+  }
+}

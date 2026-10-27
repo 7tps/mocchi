@@ -1,0 +1,61 @@
+{
+  "frameSize": 32,
+  "scale": 8,
+  "moods": {
+    "idle": {
+      "frames": 4,
+      "frameMs": 320,
+      "loop": true
+    },
+    "blink": {
+      "frames": 2,
+      "frameMs": 90,
+      "loop": false
+    },
+    "happy": {
+      "frames": 4,
+      "frameMs": 160,
+      "loop": true
+    },
+    "thinking": {
+      "frames": 4,
+      "frameMs": 380,
+      "loop": true
+    },
+    "curious": {
+      "frames": 4,
+      "frameMs": 260,
+      "loop": true
+    },
+    "confused": {
+      "frames": 4,
+      "frameMs": 300,
+      "loop": true
+    },
+    "sleepy": {
+      "frames": 4,
+      "frameMs": 520,
+      "loop": true
+    },
+    "celebrating": {
+      "frames": 4,
+      "frameMs": 140,
+      "loop": true
+    },
+    "encouraging": {
+      "frames": 4,
+      "frameMs": 240,
+      "loop": true
+    },
+    "studying": {
+      "frames": 4,
+      "frameMs": 420,
+      "loop": true
+    },
+    "waiting": {
+      "frames": 4,
+      "frameMs": 360,
+      "loop": true
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "japanese-companion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mocchi — a pixel-art Japanese tutor that lives on your desktop and phone.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "sprites": "tsx scripts/generate-sprites.ts",
+    "desktop": "npm run dev -w @jc/desktop",
+    "desktop:build": "npm run build -w @jc/desktop",
+    "desktop:web": "npm run web -w @jc/desktop",
+    "mobile": "npm run start -w @jc/mobile",
+    "api": "npm run start -w @jc/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.10.1",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
+  }
+}

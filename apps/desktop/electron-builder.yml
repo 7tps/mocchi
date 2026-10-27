@@ -1,0 +1,30 @@
+appId: app.mocchi.companion
+productName: Mocchi
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+asarUnpack:
+  - '**/*.png'
+icon: ../../assets/ui/icon-1024.png
+win:
+  target:
+    - nsis
+  # Code signing: set CSC_LINK / CSC_KEY_PASSWORD in the environment (never commit certificates).
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+mac:
+  category: public.app-category.education
+  target:
+    - dmg
+  hardenedRuntime: true
+  # Notarization requires APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID in the environment.
+linux:
+  target:
+    - AppImage
+  category: Education

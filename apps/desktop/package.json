@@ -1,0 +1,39 @@
+{
+  "name": "@jc/desktop",
+  "productName": "Mocchi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mocchi desktop companion",
+  "author": "Japanese Companion contributors",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "web": "vite --config vite.web.config.ts",
+    "package:win": "electron-vite build && electron-builder --win --config electron-builder.yml",
+    "package:mac": "electron-vite build && electron-builder --mac --config electron-builder.yml",
+    "package:linux": "electron-vite build && electron-builder --linux --config electron-builder.yml",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@jc/app-core": "*",
+    "@jc/design-system": "*",
+    "@jc/japanese-content": "*",
+    "@jc/learning-engine": "*",
+    "@jc/shared-types": "*",
+    "@jc/shared-utils": "*",
+    "@fontsource/dotgothic16": "5.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0",
+    "electron-vite": "6.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "vite": "8.3.5"
+  }
+}

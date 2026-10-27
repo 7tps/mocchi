@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaFor, clampToArea, placeNear, restoreRect } from './geometry';
+import { areaFor, clampToArea, placeMenu, placeNear, placeWidget, restoreRect } from './geometry';
 import { ActivityTracker } from './activity';
 
 const primary = { x: 0, y: 0, width: 1920, height: 1040 };
@@ -54,5 +54,38 @@ describe('activity tracking', () => {
     a.suspend();
     a.tick(9 * 3600_000, 0);
     expect(a.activeMinutes()).toBe(2);
+  });
+});
+
+describe('character placement', () => {
+  const area = { x: 0, y: 0, width: 2048, height: 1232 };
+  const insets = { left: 27, top: 52, right: 21, bottom: 3 };
+  const size = { width: 132, height: 148 };
+
+  it('lets the visible sprite sit flush against every edge (transparent margins hang off-screen)', () => {
+    expect(placeWidget({ x: -500, y: 300, ...size }, area, insets)).toMatchObject({ x: -27 });
+    expect(placeWidget({ x: 5000, y: 300, ...size }, area, insets)).toMatchObject({ x: 2048 - 132 + 21 });
+    expect(placeWidget({ x: 400, y: -500, ...size }, area, insets)).toMatchObject({ y: -52 });
+    expect(placeWidget({ x: 400, y: 5000, ...size }, area, insets)).toMatchObject({ y: 1232 - 148 + 3 });
+  });
+
+  it('snaps to an edge when released close to it, and leaves other positions alone', () => {
+    expect(placeWidget({ x: -15, y: 600, ...size }, area, insets)).toMatchObject({ x: -27, y: 600 });
+    expect(placeWidget({ x: 2048 - 132 + 21 - 10, y: 1232 - 148 + 3 - 12, ...size }, area, insets)).toMatchObject({ x: 1937, y: 1087 });
+    expect(placeWidget({ x: 700, y: 600, ...size }, area, insets)).toEqual({ x: 700, y: 600, ...size });
+    expect(placeWidget({ x: -15, y: 600, ...size }, area, insets, 0)).toMatchObject({ x: -15 });
+  });
+
+  it('never changes the window size', () => {
+    expect(placeWidget({ x: 10, y: 10, width: 132, height: 148 }, area, insets)).toMatchObject(size);
+  });
+});
+
+describe('context menu placement', () => {
+  const area = { x: 0, y: 0, width: 2048, height: 1232 };
+  const size = { width: 240, height: 300 };
+  it('opens down-right of the cursor, flipping near the right or bottom edge', () => {
+    expect(placeMenu({ x: 100, y: 100 }, size, area)).toMatchObject({ x: 100, y: 100 });
+    expect(placeMenu({ x: 2000, y: 1200 }, size, area)).toMatchObject({ x: 1760, y: 900 });
   });
 });

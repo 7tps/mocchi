@@ -522,3 +522,32 @@ describe('kanji are measured separately', () => {
     expect(replayAttempts([revealed], [], lib, T0).skills.kanji.evidence).toBe(1);
   });
 });
+
+describe('level-pack content', () => {
+  it('uses the notes carried by a pack exercise for wrong answers', async () => {
+    const { explainWrong } = await import('./answers');
+    const { indexLibrary } = await import('@jc/japanese-content');
+    const grammar = {
+      ...lib.items.find((i) => i.type === 'grammar')!,
+      id: 'g:pack-test',
+      exercises: [{ id: 'pack-test-1', kind: 'fill-blank' as const, prompt: '雨が降っ＿＿、行きません。', answer: 'たら', distractors: ['ても', 'ながら'], distractorNotes: { ても: 'ても means "even if".', ながら: 'ながら joins two simultaneous actions.' }, explanation: 'たら sets a condition.' }],
+    };
+    const custom = indexLibrary([...lib.items, grammar]);
+    const q = buildQuestion(grammar, 'fill-blank', 'choice', { library: custom, rng: createRng(2) })!;
+    expect(explainWrong(q, 'ても', checkAnswer(q, 'ても'))).toContain('even if');
+  });
+
+  it('keeps verbs with irregular conjugation out of conjugation drills', async () => {
+    const { indexLibrary } = await import('@jc/japanese-content');
+    const verbs = lib.items.filter((i) => i.type === 'vocab' && (i.partOfSpeech === 'verb-godan' || i.partOfSpeech === 'verb-ichidan'));
+    const tagged = verbs.map((v) => (v.id === 'v:行く' ? v : { ...v, tags: [...v.tags, 'irregular-conjugation'] }));
+    const custom = indexLibrary([...lib.items.filter((i) => !verbs.includes(i)), ...tagged]);
+    const form = custom.items.find((i) => i.id === 'c:masu')!;
+    const regularVerbs = new Set(verbs.map((v) => v.ja));
+    const drilled = new Set<string>();
+    for (let s = 0; s < 40; s++) drilled.add(buildQuestion(form, 'conjugate', 'choice', { library: custom, rng: createRng(s), conjugationMaxDifficulty: 10 })!.prompt);
+    // Only 行く is left untagged among godan/ichidan verbs; する-verbs and 来る may still appear.
+    expect(drilled.size).toBeGreaterThan(1);
+    expect([...drilled].filter((p) => regularVerbs.has(p) && p !== '行く')).toEqual([]);
+  });
+});

@@ -29,7 +29,8 @@ export const BAND_RANGES: Record<JlptBand, [number, number]> = {
   N1: [8.2, 9.4],
 };
 
-const KANJI_RANGES: Record<JlptBand, [number, number]> = {
+/** Kanji difficulty ranges per JLPT band. */
+export const KANJI_RANGES: Record<JlptBand, [number, number]> = {
   N5: [1.6, 3.4],
   N4: [3.4, 4.9],
   N3: [5.4, 6.2],
@@ -42,7 +43,8 @@ function spread(range: [number, number], index: number, count: number): number {
   return Math.round((range[0] + (range[1] - range[0]) * t) * 100) / 100;
 }
 
-const IMPORTANCE: Record<JlptBand, number> = { N5: 1, N4: 0.85, N3: 0.7, N2: 0.55, N1: 0.45 };
+/** Default importance per JLPT band. */
+export const IMPORTANCE: Record<JlptBand, number> = { N5: 1, N4: 0.85, N3: 0.7, N2: 0.55, N1: 0.45 };
 
 function lines(source: string): string[][] {
   return source

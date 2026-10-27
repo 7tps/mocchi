@@ -72,8 +72,11 @@ export function WidgetApp() {
       aria-label={`${t('app.name')}: ${due > 0 ? t('home.due', { n: due }) : t('tray.start')}`}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
+        // Capture so the release is seen even if the cursor outruns the window; otherwise it would keep following the mouse.
+        e.currentTarget.setPointerCapture(e.pointerId);
         void desktop.widgetDragStart();
       }}
+      onPointerCancel={() => void desktop.widgetDragEnd()}
       onPointerUp={async (e) => {
         if (e.button !== 0) return;
         const isClick = await desktop.widgetDragEnd();

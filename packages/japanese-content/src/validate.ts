@@ -17,6 +17,7 @@ const exercise = z.object({
   tokens: z.array(z.string()).optional(),
   explanation: z.string().min(1),
   difficulty: z.number().min(0).max(10).optional(),
+  distractorNotes: z.record(z.string(), z.string()).optional(),
 });
 
 export const learningItemSchema = z.object({

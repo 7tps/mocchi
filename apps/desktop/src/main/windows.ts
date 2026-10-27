@@ -1,9 +1,43 @@
-import { BrowserWindow, screen, shell } from 'electron';
+import { BrowserWindow, nativeImage, screen, shell } from 'electron';
 import { join } from 'node:path';
-import { clampToArea, defaultWidgetRect, placeNear, restoreRect, type Rect } from './geometry';
+import { MOODS, SPRITE_SIZE, frameCount, renderFrame } from '@jc/design-system';
+import { areaFor, clampToArea, defaultWidgetRect, placeMenu, placeNear, placeWidget, restoreRect, type Insets, type Rect } from './geometry';
 import { loadWindowState, saveWindowState, type WindowState } from './persist';
+import appIcon from '../../../../assets/ui/icon-256.png?asset';
 
 export const WIDGET_SIZE = { width: 132, height: 148 };
+/** The widget draws the 32px sprite at 3× (96px), centred at the bottom; space above is for the speech bubble. */
+const WIDGET_SCALE = 3;
+
+/** Transparent margins around the visible sprite pixels, so the sprite itself can sit flush against a screen edge. */
+const WIDGET_INSETS: Insets = (() => {
+  let minX = SPRITE_SIZE, maxX = -1, minY = SPRITE_SIZE, maxY = -1;
+  for (const mood of MOODS) {
+    for (let i = 0; i < frameCount(mood); i++) {
+      const frame = renderFrame(mood, i, null);
+      for (let p = 0; p < frame.length; p++) {
+        if (!frame[p]) continue;
+        const x = p % SPRITE_SIZE;
+        const y = Math.floor(p / SPRITE_SIZE);
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+  const spriteLeft = (WIDGET_SIZE.width - SPRITE_SIZE * WIDGET_SCALE) / 2;
+  const spriteTop = WIDGET_SIZE.height - SPRITE_SIZE * WIDGET_SCALE;
+  return {
+    left: spriteLeft + minX * WIDGET_SCALE,
+    right: WIDGET_SIZE.width - (spriteLeft + (maxX + 1) * WIDGET_SCALE),
+    top: spriteTop + minY * WIDGET_SCALE,
+    bottom: WIDGET_SIZE.height - (spriteTop + (maxY + 1) * WIDGET_SCALE),
+  };
+})();
+
+/** Fixed-size widget rect at a position. */
+const widgetAt = (x: number, y: number): Rect => ({ x: Math.round(x), y: Math.round(y), ...WIDGET_SIZE });
 export const QUIZ_SIZE = { width: 400, height: 470 };
 
 const isMac = process.platform === 'darwin';
@@ -29,6 +63,9 @@ function secure(win: BrowserWindow): void {
   });
 }
 
+// Mocchi's sprite for the taskbar / Alt-Tab / title bar (otherwise Electron's logo shows in development).
+const icon = nativeImage.createFromPath(appIcon);
+
 const prefs = () => ({
   preload: join(__dirname, '../preload/index.js'),
   contextIsolation: true,
@@ -45,6 +82,8 @@ export class WindowManager {
   widget: BrowserWindow | null = null;
   quiz: BrowserWindow | null = null;
   main: BrowserWindow | null = null;
+  private menu: BrowserWindow | null = null;
+  private menuAt: { x: number; y: number } | null = null;
   private state: WindowState = loadWindowState();
   private quitting = false;
   private dragTimer: NodeJS.Timeout | null = null;
@@ -57,7 +96,9 @@ export class WindowManager {
   createWidget(): BrowserWindow {
     if (this.widget && !this.widget.isDestroyed()) return this.widget;
     const area = screen.getPrimaryDisplay().workArea;
-    const r = restoreRect(this.state.widget, defaultWidgetRect(area, WIDGET_SIZE), workAreas());
+    // Saved sizes are ignored: older builds could save a window that had grown (see startWidgetDrag).
+    const saved = this.state.widget ? widgetAt(this.state.widget.x, this.state.widget.y) : defaultWidgetRect(area, WIDGET_SIZE);
+    const r = placeWidget(saved, areaFor(saved, workAreas()), WIDGET_INSETS, 0);
     const win = new BrowserWindow({
       ...r,
       frame: false,
@@ -71,6 +112,7 @@ export class WindowManager {
       alwaysOnTop: true,
       show: false,
       title: 'Mocchi',
+      icon,
       backgroundColor: '#00000000',
       webPreferences: prefs(),
     });
@@ -106,7 +148,9 @@ export class WindowManager {
       const dx = c.x - this.dragStart.cursor.x;
       const dy = c.y - this.dragStart.cursor.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) this.dragStart.moved = true;
-      if (this.dragStart.moved) this.widget.setPosition(this.dragStart.win.x + dx, this.dragStart.win.y + dy);
+      // setBounds with the fixed size, not setPosition: at fractional display scaling (125 %, 150 %)
+      // Windows rounds the window outward on every move, so it grows and the sprite drifts.
+      if (this.dragStart.moved) this.widget.setBounds(widgetAt(this.dragStart.win.x + dx, this.dragStart.win.y + dy));
     }, 16);
   }
 
@@ -117,7 +161,9 @@ export class WindowManager {
     this.dragStart = null;
     const w = this.widget;
     if (w && moved) {
-      const b = clampToArea(w.getBounds(), screen.getDisplayMatching(w.getBounds()).workArea);
+      const current = w.getBounds();
+      const at = widgetAt(current.x, current.y);
+      const b = placeWidget(at, screen.getDisplayMatching(at).workArea, WIDGET_INSETS);
       w.setBounds(b);
       this.state.widget = b;
       saveWindowState(this.state);
@@ -159,6 +205,7 @@ export class WindowManager {
       alwaysOnTop: true,
       show: false,
       title: 'Mocchi quiz',
+      icon,
       backgroundColor: '#10162a',
       webPreferences: prefs(),
     });
@@ -180,6 +227,62 @@ export class WindowManager {
     win.on('closed', () => (this.quiz = null));
     this.quiz = win;
     return win;
+  }
+
+  /**
+   * The character's right-click menu, drawn by the renderer (#/menu) so it matches
+   * the app. It opens hidden; the renderer reports its size, then it is shown at the cursor.
+   */
+  showMenu(): void {
+    this.closeMenu();
+    const cursor = screen.getCursorScreenPoint();
+    const win = new BrowserWindow({
+      x: cursor.x,
+      y: cursor.y,
+      width: 240,
+      height: 320,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      maximizable: false,
+      minimizable: false,
+      fullscreenable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      show: false,
+      title: 'Mocchi menu',
+      icon,
+      backgroundColor: '#00000000',
+      webPreferences: prefs(),
+    });
+    win.setAlwaysOnTop(true, isMac ? 'floating' : 'pop-up-menu');
+    secure(win);
+    loadRoute(win, 'menu');
+    // Like a native menu: clicking anywhere else dismisses it.
+    win.on('blur', () => this.closeMenu());
+    win.on('closed', () => {
+      if (this.menu === win) this.menu = null;
+    });
+    this.menu = win;
+    this.menuAt = cursor;
+  }
+
+  /** The menu has rendered: size it to its content and show it next to the cursor. */
+  menuReady(size: { width: number; height: number }): void {
+    const w = this.menu;
+    if (!w || w.isDestroyed() || !this.menuAt) return;
+    const s = { width: Math.ceil(Math.min(Math.max(size.width, 120), 400)), height: Math.ceil(Math.min(Math.max(size.height, 40), 600)) };
+    w.setBounds(placeMenu(this.menuAt, s, screen.getDisplayNearestPoint(this.menuAt).workArea));
+    if (!w.isVisible()) {
+      w.show();
+      w.focus();
+    }
+  }
+
+  closeMenu(): void {
+    const w = this.menu;
+    this.menu = null;
+    if (w && !w.isDestroyed()) w.close();
   }
 
   hideQuiz(): void {
@@ -212,12 +315,19 @@ export class WindowManager {
       minHeight: 560,
       show: false,
       title: 'Mocchi — Japanese companion',
+      icon,
       backgroundColor: '#10162a',
-      autoHideMenuBar: true,
+      // The renderer draws a themed title bar (TitleBar.tsx). macOS keeps its traffic lights.
+      ...(isMac ? { titleBarStyle: 'hiddenInset' as const } : { frame: false }),
       webPreferences: prefs(),
     });
     secure(win);
     loadRoute(win, route);
+    const sendState = () => win.webContents.send('desktop:window-state', { maximized: win.isMaximized() || win.isFullScreen() });
+    win.on('maximize', sendState);
+    win.on('unmaximize', sendState);
+    win.on('enter-full-screen', sendState);
+    win.on('leave-full-screen', sendState);
     win.once('ready-to-show', () => win.show());
     const save = () => {
       if (!win.isMinimized() && !win.isMaximized()) {
@@ -244,7 +354,10 @@ export class WindowManager {
     for (const w of [this.widget, this.quiz, this.main]) {
       if (!w || w.isDestroyed()) continue;
       const b = w.getBounds();
-      w.setBounds(clampToArea(b, screen.getDisplayMatching(b).workArea));
+      if (w === this.widget) {
+        const at = widgetAt(b.x, b.y);
+        w.setBounds(placeWidget(at, areaFor(at, workAreas()), WIDGET_INSETS, 0));
+      } else w.setBounds(clampToArea(b, screen.getDisplayMatching(b).workArea));
     }
   }
 

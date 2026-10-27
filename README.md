@@ -15,13 +15,14 @@ apps/desktop          Electron main + preload + React renderer (widget, quiz pop
 apps/mobile           Expo Router app
 packages/shared-types Domain model (UserProfile, LearningItem, LearningProgress, QuizAttempt, …)
 packages/shared-utils Timezone-aware time, kana/romaji, answer normalisation, seeded RNG, HLC clock
-packages/japanese-content  Curriculum data, conjugation engine, content validation and pack import
+packages/japanese-content  Curriculum data, conjugation engine, validation, JLPT level packs + hand-written level grammar (src/levels)
 packages/learning-engine   SRS, ability model, questions, answers, sessions, placement, scheduler, progression, stats, replay
 packages/design-system     Colour tokens, i18n strings, the Mocchi sprite generator
 packages/app-core          TutorService (the app's brain), SQLite store + migrations, sync client
 services/api               Sync server (Node http + node:sqlite)
 assets/character, assets/ui  Generated sprite sheets, cosmetics, icons
 scripts/                   Sprite/PNG generation
+tools/content              Builds the N5–N1 level packs from pinned open datasets (build time only)
 tests/                     End-to-end integration tests (real SQLite + real sync server)
 docs/                      Plan, architecture, character, privacy, release notes
 ```
@@ -92,11 +93,24 @@ Bundle the mobile app without a device (verifies Metro resolution and Hermes com
 npm run bundle:android -w @jc/mobile
 ```
 
+## JLPT level packs (N5–N1 content)
+
+The bundled curriculum is small and hand-written. Content up to N1 comes in five level packs built from open datasets (JMdict, KANJIDIC2, Tatoeba, community JLPT lists) plus hand-written grammar and readings:
+
+```bash
+npm run content:fetch    # download the pinned datasets into .cache/datasets (≈27 MB, once)
+npm run content:build    # write dist/content/jlpt-n5…n1.json.gz + manifest.json
+```
+
+In development, `npm run desktop` loads whatever is in `dist/content` (default level N5; change it in Settings › Study content).
+
 ## Build installers
 
 ```bash
-npm run package:win -w @jc/desktop
+npm run package:win
 ```
+
+This fetches and builds the content packs, then builds `apps/desktop/release/Mocchi-Setup-<version>.exe`. The installer has a **Study content** page: N5 (default, built in) or up to N4 / N3 / N2 / N1, downloaded during setup from the GitHub release `content-<CONTENT_PACK_VERSION>` (see [docs/release.md](docs/release.md)). Silent install: `Mocchi-Setup-0.1.0.exe /S /LEVEL=N3`.
 
 ```bash
 npm run package:mac -w @jc/desktop
@@ -109,6 +123,7 @@ See [docs/release.md](docs/release.md) for signing, notarisation and store requi
 | Variable | Where | Purpose |
 | --- | --- | --- |
 | `MOCCHI_USER_DATA` | desktop | Use a separate profile folder (testing). |
+| `MOCCHI_CONTENT_URL` | content build, packaging, desktop | Download base URL for level packs (e.g. `http://127.0.0.1:8799/` to test against a local server). |
 | `MOCCHI_SCHEDULER_DEBUG=1` | desktop | 5 s scheduler tick, no start-up grace, 30 s activity target — to see pop-ups quickly. Your interval/quiet-hour/limit settings still apply. |
 | `PORT`, `HOST`, `DB_PATH`, `CORS_ORIGIN` | services/api | See `services/api/.env.example`. |
 
@@ -118,4 +133,4 @@ See [docs/implementation-plan.md](docs/implementation-plan.md) for what is imple
 
 ## Licences
 
-Code and the curated curriculum: MIT. Pixel font DotGothic16: SIL Open Font License 1.1. JLPT levels shown in the app are approximate and unofficial.
+Code, the curated curriculum and the hand-written level grammar/readings: MIT. Level packs also contain JMdict/KANJIDIC2 data (© EDRDG, CC BY-SA 4.0 — share-alike applies to the packs), Tatoeba sentences (CC BY 2.0 FR) and JLPT level estimates from Jonathan Waller’s lists (CC BY); see `dist/content/ATTRIBUTION.txt`. Pixel font DotGothic16: SIL Open Font License 1.1. JLPT levels shown in the app are approximate and unofficial.

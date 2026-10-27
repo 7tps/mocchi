@@ -2,10 +2,19 @@
 
 ## Desktop (electron-builder, `apps/desktop/electron-builder.yml`)
 
-- Windows: `npm run package:win -w @jc/desktop` produces an NSIS installer in `apps/desktop/release`. For a signed build set `CSC_LINK` and `CSC_KEY_PASSWORD` (an EV/OV code-signing certificate) in the environment; unsigned builds trigger SmartScreen warnings.
+- Windows: `npm run package:win` (repo root) fetches the datasets, builds the level packs and produces `apps/desktop/release/Mocchi-Setup-<version>.exe` (assisted NSIS installer, per-user, ~127 MB). For a signed build set `CSC_LINK` and `CSC_KEY_PASSWORD` (an EV/OV code-signing certificate) in the environment; unsigned builds trigger SmartScreen warnings.
 - macOS (must run on a Mac): `npm run package:mac -w @jc/desktop`. Requires an Apple Developer ID certificate in the keychain and, for notarisation, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`. Hardened runtime is enabled.
 - Linux: `npm run package:linux -w @jc/desktop` (AppImage).
 - "Start with my computer" is applied only in packaged builds.
+
+## JLPT level packs (must be published before the installer can download N4–N1)
+
+- The installer ships N5 and `manifest.json`; N4–N1 are downloaded from `https://github.com/7tps/mocchi/releases/download/content-<CONTENT_PACK_VERSION>/` (constant in `packages/japanese-content/src/packs.ts`). Until that release exists, setup reports that the content couldn't be downloaded and the app retries on each start (Settings › Study content › Try again).
+- Publish (from the repo root, after `npm run content:build`):
+  `gh release create content-2026.10.1 dist/content/jlpt-n4.json.gz dist/content/jlpt-n3.json.gz dist/content/jlpt-n2.json.gz dist/content/jlpt-n1.json.gz dist/content/manifest.json dist/content/ATTRIBUTION.txt --repo 7tps/mocchi --title "Content packs 2026.10.1"`
+- The app accepts a pack only if its SHA-256 matches the manifest bundled in the build, so a release's packs must come from the same `content:build` as the installer. Changing pack contents → bump `CONTENT_PACK_VERSION`, rebuild, publish a new release, rebuild the installer.
+- Self-hosting: set `MOCCHI_CONTENT_URL` when running `content:build`/`package:win` (HTTPS required at runtime, except 127.0.0.1/localhost).
+- Silent install: `/S /LEVEL=N5|N4|N3|N2|N1` (default: previous choice, else N5). The choice is stored in `HKCUSoftwareMocchiContentLevel` and `resourcescontentselection.json`; uninstall removes both (packs the app downloaded later stay in `%APPDATA%Mocchicontent` with the rest of the app data).
 
 ## Mobile (Expo)
 

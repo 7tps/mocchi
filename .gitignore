@@ -19,3 +19,5 @@ apps/mobile/ios/
 .DS_Store
 Thumbs.db
 dist-web/
+.cache/
+apps/desktop/installer/levels.generated.nsh

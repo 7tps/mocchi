@@ -9,6 +9,15 @@ files:
   - '!**/*.map'
 asarUnpack:
   - '**/*.png'
+# JLPT level packs: the manifest and the N5 pack ship with every build; the installer
+# downloads N4–N1 on request (see installer/installer.nsh). Built by `npm run content:build`.
+extraResources:
+  - from: ../../dist/content
+    to: content
+    filter:
+      - manifest.json
+      - jlpt-n5.json.gz
+      - ATTRIBUTION.txt
 icon: ../../assets/ui/icon-1024.png
 win:
   target:
@@ -16,8 +25,11 @@ win:
   # Code signing: set CSC_LINK / CSC_KEY_PASSWORD in the environment (never commit certificates).
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
+  include: installer/installer.nsh
+  artifactName: Mocchi-Setup-${version}.${ext}
 mac:
   category: public.app-category.education
   target:

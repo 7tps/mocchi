@@ -412,7 +412,7 @@ function buildRaw(item: LearningItem, format: QuestionFormat, mode: ResponseMode
       const e = pick(rng, fresh.length ? fresh : pool);
       const wrong: Wrong[] = (e.distractors ?? []).map((d) => ({
         text: d,
-        why: format === 'comprehension' ? 'The passage doesn’t say that.' : whyNotFor(e.id, d),
+        why: e.distractorNotes?.[d] ?? (format === 'comprehension' ? 'The passage doesn’t say that.' : whyNotFor(e.id, d)),
       }));
       const common = {
         ...base(item, format, format === 'arrange' ? 'arrange' : mode, e.id),
@@ -459,7 +459,7 @@ function buildRaw(item: LearningItem, format: QuestionFormat, mode: ResponseMode
     case 'conjugate': {
       const form = (item.tags.find((t) => t !== 'conjugation') ?? 'masu') as ConjugationForm;
       const maxD = ctx.conjugationMaxDifficulty ?? 4;
-      const words = lib.items.filter((w) => w.type === 'vocab' && canConjugate(w.partOfSpeech, form) && w.difficulty <= maxD);
+      const words = lib.items.filter((w) => w.type === 'vocab' && canConjugate(w.partOfSpeech, form) && w.difficulty <= maxD && !w.tags.includes('irregular-conjugation'));
       if (!words.length || !FORM_INFO[form]) return null;
       const w = pick(rng, words);
       const pos = w.partOfSpeech;

@@ -396,3 +396,38 @@ describe('reading reveals in sessions', () => {
     expect(attempts.some((a) => a.readingShown)).toBe(true);
   });
 });
+
+describe('journey: closing a pop-up early', () => {
+  it('keeps due reviews in sessions the learner starts, and only briefly out of check-ins', async () => {
+    const c = clock();
+    const svc = await makeService(dbFile(), c);
+    await placementAllDontKnow(svc);
+    await svc.completeOnboarding({ experience: 'none', settings: { dailyGoalQuestions: 10 } });
+    // Learn two items, then let them come due.
+    const first = (await svc.startSession('manual'))!;
+    for (const q of first.questions) await svc.answerQuestion(first.id, q.id, answerFor(svc, first.id, q.id), 3000);
+    await svc.finishSession(first.id);
+    c.advance(DAY);
+    const due = new Set((await svc.getReviewQueue()).filter((e) => (e.nextReviewAt ?? Infinity) <= c.now()).map((e) => e.id));
+    expect(due.size).toBeGreaterThan(0);
+
+    // A check-in pops up and is closed without answering.
+    const prompted = (await svc.startSession('scheduled'))!;
+    const skipped = prompted.questions.map((q) => q.itemId).filter((id) => due.has(id));
+    expect(skipped.length).toBeGreaterThan(0);
+    await svc.dismissSession(prompted.id);
+
+    // Clicking Mocchi right away still offers those due reviews…
+    const clicked = (await svc.startSession('manual'))!;
+    expect(clicked.questions.some((q) => skipped.includes(q.itemId))).toBe(true);
+    await svc.dismissSession(clicked.id);
+    // …the next check-in leaves them alone for a while…
+    const soon = await svc.startSession('scheduled');
+    expect(soon?.questions.some((q) => skipped.includes(q.itemId)) ?? false).toBe(false);
+    if (soon) await svc.dismissSession(soon.id);
+    // …and brings them back once the cooldown has passed, even after further dismissals.
+    c.advance(31 * MINUTE);
+    const later = (await svc.startSession('scheduled'))!;
+    expect(later.questions.some((q) => skipped.includes(q.itemId))).toBe(true);
+  });
+});

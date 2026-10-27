@@ -115,6 +115,8 @@ interface PromptLog {
 }
 
 const TOKEN_KEY = 'sync-token';
+/** How long a check-in avoids items the learner just closed a pop-up on. */
+const DISMISS_COOLDOWN_MS = 30 * MINUTE;
 
 const REVEAL_NOTE = 'Reading shown: this counts toward kanji practice, not against this skill.';
 const KANJI_NOTE = 'Noted as kanji to work on. It does not count against the skill being tested.';
@@ -131,7 +133,8 @@ export function publicQuestion(q: Question): PublicQuestion {
  * preview run it in-process. All learning state flows through here.
  */
 export class TutorService implements TutorApi {
-  readonly library: ContentLibrary;
+  /** Bundled curriculum plus any installed level packs; replaced via replaceLibrary(). */
+  library: ContentLibrary;
   private readonly store: TutorStore;
   private readonly platform: Platform;
   private readonly now: () => number;
@@ -203,6 +206,16 @@ export class TutorService implements TutorApi {
     if (this.listening === available) return;
     this.listening = available;
     this.emit('capabilities');
+  }
+
+  /**
+   * Swap in a new library (level packs added or removed). Progress is keyed by
+   * item id, so nothing is lost; items no longer in the library are simply not
+   * scheduled. Sessions already in progress keep their questions.
+   */
+  replaceLibrary(library: ContentLibrary): void {
+    this.library = library;
+    this.emit('library');
   }
 
   subscribe(fn: (reason: string) => void): () => void {
@@ -401,9 +414,22 @@ export class TutorService implements TutorApi {
   // Sessions
   // -------------------------------------------------------------------------
 
+  /**
+   * Items left unanswered when a pop-up was closed, with when. Each expires on
+   * its own (an older format kept one shared timestamp that every new dismissal
+   * refreshed, so items could stay blocked indefinitely).
+   */
+  private async dismissedAt(): Promise<Record<string, number>> {
+    const rec = await this.store.getMeta<{ items?: Record<string, number>; ids?: string[]; at?: number }>('recentDismissed');
+    const items: Record<string, number> = { ...rec?.items };
+    for (const id of rec?.ids ?? []) items[id] ??= rec?.at ?? 0;
+    const cutoff = this.now() - DISMISS_COOLDOWN_MS;
+    for (const [id, at] of Object.entries(items)) if (at < cutoff) delete items[id];
+    return items;
+  }
+
   private async recentlyDismissed(): Promise<Set<string>> {
-    const rec = await this.store.getMeta<{ ids: string[]; at: number }>('recentDismissed');
-    return rec && this.now() - rec.at < 2 * HOUR ? new Set(rec.ids) : new Set();
+    return new Set(Object.keys(await this.dismissedAt()));
   }
 
   async startSession(type: SessionType, opts: { reviewOnly?: boolean; length?: number } = {}): Promise<SessionView | null> {
@@ -417,7 +443,9 @@ export class TutorService implements TutorApi {
       newItemsPerSession: this.settings.newItemsPerSession,
       now,
       seed: `${this.deviceId}:${now}`,
-      recentItemIds: await this.recentlyDismissed(),
+      // Only check-ins avoid just-dismissed items; a session the learner starts
+      // (clicking Mocchi, "Review only") should include everything that is due.
+      recentItemIds: type === 'scheduled' || type === 'notification' ? await this.recentlyDismissed() : undefined,
       listening: this.listening && this.settings.enabledSkills.includes('listening'),
       reviewOnly: opts.reviewOnly,
     });
@@ -570,8 +598,9 @@ export class TutorService implements TutorApi {
     if (!active) return;
     this.active.delete(sessionId);
     const unanswered = active.plan.filter((p) => !active.answered.has(p.question.id)).map((p) => p.question.itemId);
-    const prev = await this.recentlyDismissed();
-    await this.store.setMeta('recentDismissed', { ids: [...new Set([...prev, ...unanswered])], at: this.now() });
+    const items = await this.dismissedAt();
+    for (const id of unanswered) items[id] = this.now();
+    await this.store.setMeta('recentDismissed', { items });
     if (active.answered.size > 0) {
       await this.finishSessionQuietly(active);
     }

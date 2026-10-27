@@ -1,6 +1,13 @@
 # Implementation plan and status
 
-Last updated: 2026-10-26.
+Last updated: 2026-10-27. See also `CLAUDE.md` (architecture, commands, conventions) and `docs/development-notes.md` (decisions, bugs, failed approaches).
+
+## Current state
+
+- **Phase:** pre-release (phase 7). JLPT N5–N1 level packs and the Windows installer with a level picker are built (phase 8, below).
+- **Git:** `980d4f2 initial commit` on `main`; everything since (docs, level packs, installer) is **uncommitted**.
+- **Checks:** `npm run check` passes (lint, typecheck of 10 workspaces, 124 tests). `npm run package:win` builds `Mocchi-Setup-0.1.0.exe`.
+- **Exact next task:** publish the `content-2026.10.1` GitHub release (command in `docs/release.md`) so the installer's N4–N1 downloads work, then click through the interactive installer once (the level page has been compiled but not seen). After that: more level grammar (see "Unfinished").
 
 ## Environment findings
 
@@ -42,6 +49,29 @@ Last updated: 2026-10-26.
 
 **Sync server**: anonymous accounts, hashed bearer tokens, single-use link codes, append-only idempotent event log, paged pull with cursors, export, cascading account deletion, request validation, no request-body logging.
 
+## Phase 8: content to N1 + Windows installer (2026-10-27)
+
+- **Level packs** (`tools/content`, `packages/japanese-content/src/packs.ts`): five gzip JSON packs built from pinned open datasets plus hand-written grammar. Items already in the bundled curriculum are skipped; every item is validated at build time.
+
+  | Pack | New words | New kanji | Grammar | Readings | Size |
+  | --- | --- | --- | --- | --- | --- |
+  | N5 | 418 | 1 | 0 | 0 | 47 KB (ships in the installer) |
+  | N4 | 592 | 107 | 25 | 1 | 111 KB |
+  | N3 | 2,111 | 360 | 20 | 1 | 349 KB |
+  | N2 | 1,761 | 365 | 16 | 1 | 298 KB |
+  | N1 | 2,681 | 1,227 | 16 | 1 | 494 KB |
+
+  With the bundled curriculum that is ≈7,960 words and ≈2,210 kanji (the community N5–N1 lists), 114 grammar points and 10 reading passages. About 85 % of words have a Tatoeba example sentence. 35 of 8,131 list entries (odd prefixes and set phrases) are unmatched (`dist/content/unmatched.txt`).
+- **Installer** (`apps/desktop/installer/installer.nsh`): assisted per-user NSIS installer with a "Study content" page: N5 (default, built in) or up to N4/N3/N2/N1, with download sizes. Packs download during setup (inetc) into `resources\content`; failures don't block setup. `/S /LEVEL=N3` for silent installs; the previous choice is remembered.
+- **Desktop runtime** (`apps/desktop/src/main/content.ts`): loads only packs whose SHA-256 matches the bundled manifest, downloads missing or corrupt ones (HTTPS only, atomic writes), and swaps the service library live. Settings › Study content raises or lowers the level; About lists the data sources.
+- **Engine**: pack exercises carry their own wrong-answer notes; verbs with irregular conjugation (from JMdict POS tags) are excluded from conjugation drills. With a 10,472-item library, a session composes in ≈25 ms and a 40-question placement runs in ≈0.2 s.
+- **Verified**:
+  - A silent install with `/LEVEL=N3` against a local server downloaded exactly N4 and N3 and recorded the selection.
+  - The installed app loaded N5–N3 (4,438 items). Raising the level to N1 in the app downloaded N2 and N1 (10,472 items).
+  - A truncated pack was rejected and downloaded again on restart.
+  - The Settings panel was screenshotted.
+  - A silent uninstall removed the files, registry value, shortcuts and uninstall entry.
+
 ## Changes after first review (2026-10-26)
 
 - **Placement exam in the corner.** On desktop, after the short intro the main window steps aside and the exam runs in the compact quiz pop-up beside the corner character. Closing it saves progress (clicking Mocchi resumes); when it ends, the main window returns with the full results. Retakes from Settings use the same pop-up.
@@ -65,9 +95,15 @@ Last updated: 2026-10-26.
 - `npm run typecheck`: all 9 workspaces pass (including desktop and mobile).
 - `npm test`: 112 tests pass. Coverage includes:
   - unit tests for the content, engine and desktop geometry/activity modules
-  - 14 integration journeys covering the beginner and intermediate journeys, a repeatedly missed item returning, pause, notification rescheduling, a timezone change, restart persistence, export, local deletion, migration failure, offline learning then sync to a second device, settings conflicts, account deletion, and an unreachable server.
+  - 16 integration journeys (32 content, 58 engine, 6 desktop, 16 integration tests) covering the beginner and intermediate journeys, a repeatedly missed item returning, pause, notification rescheduling, a timezone change, restart persistence, export, local deletion, migration failure, offline learning then sync to a second device, settings conflicts, account deletion, an unreachable server, extra practice not using up check-ins, and reading reveals lowering only the kanji estimate.
 - Desktop: built with electron-vite and launched with an isolated profile. Driven over the Chrome DevTools Protocol through onboarding → placement exam (28 adaptive questions) → results → dashboard. Relaunched to confirm onboarding and progress persisted; the widget and quiz pop-up opened, a session completed with XP and a milestone, and the pop-up closed cleanly.
-- Mobile: `expo export` produced Hermes bundles for Android and iOS (all workspace packages and sprite assets resolved).
+- Mobile: `expo export` produced Hermes bundles for Android and iOS (all workspace packages and sprite assets resolved). Android re-bundled after the first-review changes.
+- First-review changes verified in the real Electron app on a fresh profile:
+  - The exam opened in the corner pop-up with the main window hidden.
+  - The “why not” feedback appeared, and “Show reading” and “I can’t read the kanji” behaved as designed.
+  - “See my results” brought the main window back with “not measured — the kanji got in the way”.
+  - A clicked session was labelled “Extra practice”, and the scheduler did not report it as a check-in.
+  - A scheduled pop-up firing live was not observed: the scheduler needs real keyboard/mouse activity, and it was still in start-up grace.
 - Browser preview of the renderer checked in night and paper themes with no console errors.
 
 ## Known limitations and trade-offs
@@ -81,9 +117,23 @@ Last updated: 2026-10-26.
 - **Content ceiling**: the curriculum is strongest for N5–N4 with a smaller N3 set and a few N2/N1 placement probes, so placement above N3 is less precise (the UI shows "≈").
 - **Character art** is generated procedurally from one sprite model; hand-drawn sheets can replace the PNGs without code changes (docs/character.md).
 
+## Unfinished
+
+- Mobile never run on a device or emulator. Notification delivery and tap routing, the Japanese keyboard, `expo-sqlite` migrations on device, and `expo-secure-store` are untested.
+- A scheduled desktop pop-up firing on its own has not been observed live. The policy is unit and integration tested, and `MOCCHI_SCHEDULER_DEBUG=1` exists for this.
+- Grammar and particle prompts have no kana readings, so “Show reading” is unavailable there. In the exam “I can’t read the kanji” covers it; in regular sessions there is no equivalent.
+- No code signing or store submission. No rate limiting or Postgres option on the sync server. No recorded audio.
+- **Grammar coverage is far short of N1.** There are 114 grammar points (N5 16, N4 39, N3 24, N2 18, N1 17, including bundled ones); full N4–N1 coverage needs roughly 600. There are only 10 reading passages; N1-level reading and listening practice needs many more passages and recorded audio. Vocabulary and kanji coverage of the community lists is essentially complete.
+- **Example-sentence readings are machine-generated** (kuromoji/IPADIC) and occasionally wrong (e.g. 指一本 → ゆびいちほん). Meanings are terse JMdict glosses, not hand-written explanations.
+- **The `content-2026.10.1` release is not published.** Until it is, the release installer can't download N4–N1; it says so, and the app retries. The interactive installer page has not been seen; only silent installs were tested. The installer is unsigned (SmartScreen warning).
+- **Mobile doesn't use level packs** (bundled curriculum only).
+
 ## Next steps
 
-1. Run the mobile app on Android and iOS devices; verify notification timing, tap routing and the Japanese keyboard.
-2. Code signing for Windows/macOS; Play/App Store listings.
-3. Recorded audio for listening; import an openly licensed dictionary pack via `importContentPack` (attribution is preserved per item).
-4. Rate limiting and Postgres storage for a hosted sync server.
+1. Publish the content release; click through the interactive installer; commit.
+2. Write more level grammar (≈20–40 points per level per batch, with inline why-not notes) and reading passages; review the generated readings of the most frequent sentences.
+3. Load level packs on mobile (bundle N5, download the others like desktop).
+4. Run the mobile app on Android and iOS devices; verify notification timing, tap routing and the Japanese keyboard.
+5. Code signing for Windows/macOS; Play/App Store listings.
+6. Recorded audio for listening.
+7. Rate limiting and Postgres storage for a hosted sync server.

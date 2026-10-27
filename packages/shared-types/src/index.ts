@@ -91,6 +91,8 @@ export interface ContentExercise {
   tokens?: string[];
   explanation: string;
   difficulty?: number;
+  /** Why each distractor is wrong, keyed by distractor text (level packs carry these inline). */
+  distractorNotes?: Record<string, string>;
 }
 
 export interface LearningItem {

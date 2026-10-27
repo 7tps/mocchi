@@ -141,3 +141,61 @@ describe('wrong-answer notes', () => {
     }
   });
 });
+
+describe('JLPT level packs', () => {
+  it('include lower levels when a target is chosen', async () => {
+    const { levelsUpTo } = await import('./index');
+    expect(levelsUpTo('N5')).toEqual(['N5']);
+    expect(levelsUpTo('N3')).toEqual(['N5', 'N4', 'N3']);
+    expect(levelsUpTo('N1')).toHaveLength(5);
+  });
+
+  it('merge into the bundled library in level order, bundled items winning', async () => {
+    const { libraryWithPacks, parseLevelPack } = await import('./index');
+    const base = getLibrary();
+    const taken = base.items.find((i) => i.type === 'vocab')!;
+    const extra = { ...taken, id: 'v:パックテスト', ja: 'パックテスト', reading: 'ぱっくてすと', meanings: ['pack test'], jlpt: 'N3' as const };
+    const raw = { format: 'jc-content-pack', version: 1, name: 'N3', level: 'N3', contentVersion: 't', source: { id: 't', license: 'MIT' }, items: [{ ...taken, meanings: ['overridden'] }, extra] };
+    const { pack, issues } = parseLevelPack(raw, { validate: true });
+    expect(issues).toEqual([]);
+    const lib = libraryWithPacks(base, [pack!]);
+    expect(lib.byId.get(taken.id)?.meanings).toEqual(taken.meanings);
+    expect(lib.byId.has('v:パックテスト')).toBe(true);
+    expect(lib.items.length).toBe(base.items.length + 1);
+    expect(parseLevelPack({ format: 'nope' }, { validate: false }).pack).toBeNull();
+  });
+});
+
+describe('level grammar (hand-written)', async () => {
+  const { LEVEL_GRAMMAR, LEVEL_READINGS, grammarEntryToItem, readingEntryToItem, PACK_LEVELS } = await import('./index');
+  const grammar = PACK_LEVELS.flatMap((l) => LEVEL_GRAMMAR[l]);
+  // Readings are generated at pack build time; a placeholder keeps validation focused on structure.
+  const items = [
+    ...grammar.map((g, i) => grammarEntryToItem(g, i, () => 'よみ')),
+    ...PACK_LEVELS.flatMap((l) => LEVEL_READINGS[l]).map((r, i) => readingEntryToItem(r, i, () => 'よみ')),
+  ];
+
+  it('passes content validation', () => {
+    expect(validateItems(items)).toEqual([]);
+  });
+
+  it('sits at the level it is filed under, with unique ids not used by the bundled curriculum', () => {
+    for (const l of PACK_LEVELS) for (const g of LEVEL_GRAMMAR[l]) expect(g.jlpt, g.id).toBe(l);
+    const bundled = getLibrary();
+    const ids = items.map((i) => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(bundled.byId.has(id), id).toBe(false);
+    const exerciseIds = items.flatMap((i) => (i.exercises ?? []).map((e) => e.id));
+    expect(new Set(exerciseIds).size).toBe(exerciseIds.length);
+  });
+
+  it('explains every distractor', () => {
+    const missing: string[] = [];
+    for (const item of items) {
+      for (const e of item.exercises ?? []) {
+        for (const d of e.distractors ?? []) if (!e.distractorNotes?.[d]?.trim()) missing.push(`${e.id}: ${d}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+});

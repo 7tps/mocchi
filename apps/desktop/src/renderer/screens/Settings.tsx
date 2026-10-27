@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AppState } from '@jc/app-core';
-import { SKILLS, type CharacterMood, type Skill, type UserSettings } from '@jc/shared-types';
+import { PACK_LEVELS, type ContentLevelStatus, type ContentStatus } from '@jc/japanese-content';
+import { SKILLS, type CharacterMood, type JlptBand, type Skill, type UserSettings } from '@jc/shared-types';
 import { SKILL_LABELS, relativeTime, t } from '@jc/design-system';
 import { COSMETICS, MILESTONES } from '@jc/learning-engine';
 import { api, desktop, isElectron } from '../bridge';
 import { useLoad } from '../hooks';
+import { detectJapaneseVoice } from '../audio';
 import { Mocchi } from '../components/Mocchi';
 import { ErrorNote, Meter, Stepper, TimeField, Toggle } from '../components/ui';
 import { PlacementResults } from './Onboarding';
@@ -57,8 +59,8 @@ export function Settings({ state }: { state: AppState }) {
               </button>
             ))}
           </div>
-          {!state.listeningAvailable ? <span className="faint small">Listening needs a Japanese text-to-speech voice installed in your OS.</span> : null}
         </div>
+        {!state.listeningAvailable ? <VoicePrompt /> : null}
       </section>
 
       <section className="panel">
@@ -110,6 +112,8 @@ export function Settings({ state }: { state: AppState }) {
         <Toggle label={t('settings.translations')} checked={s.showTranslations} onChange={(v) => set({ showTranslations: v })} />
       </section>
 
+      {isElectron ? <ContentPanel /> : null}
+
       <section className="panel">
         <h2>{t('settings.system')}</h2>
         {isElectron ? <Toggle label={t('settings.startup')} checked={s.launchAtStartup} onChange={(v) => set({ launchAtStartup: v })} /> : null}
@@ -118,6 +122,107 @@ export function Settings({ state }: { state: AppState }) {
 
       <SyncPanel state={state} />
     </div>
+  );
+}
+
+/** Shown while no Japanese text-to-speech voice is available: how to install one. */
+function VoicePrompt() {
+  const { data: info } = useLoad(() => desktop.info(), [], false);
+  const [checking, setChecking] = useState(false);
+  const [stillMissing, setStillMissing] = useState(false);
+  const platform = info?.platform;
+  const check = async () => {
+    setChecking(true);
+    const ok = await detectJapaneseVoice();
+    await desktop.setListening(ok);
+    setStillMissing(!ok);
+    setChecking(false);
+  };
+  return (
+    <div className="panel alt stack" role="note" style={{ gap: 8, marginTop: 8 }}>
+      <strong>{t('settings.voiceTitle')}</strong>
+      <span className="small">{t('settings.voiceBody')}</span>
+      <span className="small dim">
+        {platform === 'win32' ? t('settings.voiceStepsWin') : platform === 'darwin' ? t('settings.voiceStepsMac') : t('settings.voiceStepsOther')}
+      </span>
+      <div className="row">
+        {platform === 'win32' && isElectron ? (
+          <button type="button" className="btn primary small" onClick={() => void desktop.openVoiceSettings()}>
+            {t('settings.voiceOpen')}
+          </button>
+        ) : null}
+        <button type="button" className="btn small" disabled={checking} onClick={() => void check()}>
+          {t('settings.voiceCheck')}
+        </button>
+        {isElectron ? (
+          <button type="button" className="btn ghost small" onClick={() => void desktop.relaunch()}>
+            {t('settings.voiceRestart')}
+          </button>
+        ) : null}
+      </div>
+      {stillMissing ? <span className="faint small">{t('settings.voiceStillMissing')}</span> : null}
+    </div>
+  );
+}
+
+function ContentPanel() {
+  const { data, reload } = useLoad(() => desktop.contentStatus(), []);
+  const [live, setLive] = useState<ContentStatus | null>(null);
+  useEffect(() => desktop.onContent((s) => setLive(s)), []);
+  const status = live ?? data;
+  if (!status?.available) return null;
+  const change = async (level: JlptBand) => {
+    if (PACK_LEVELS.indexOf(level) < PACK_LEVELS.indexOf(status.targetLevel) && !confirm(t('settings.contentLower'))) return;
+    setLive(await desktop.setContentLevel(level));
+    reload();
+  };
+  const stateLabel = (l: ContentLevelStatus) =>
+    l.state === 'installed' ? t('settings.contentInstalled') : l.state === 'downloading' ? t('settings.contentDownloading') : l.state === 'failed' ? t('settings.contentFailed') : t('settings.contentMissing');
+  const failed = status.levels.find((l) => l.included && l.state === 'failed');
+  return (
+    <section className="panel">
+      <h2>{t('settings.content')}</h2>
+      <p className="faint small" style={{ marginTop: -6 }}>
+        {t('settings.contentHint')}
+      </p>
+      <div className="field">
+        <span>{t('settings.contentLevel')}</span>
+        <div className="chips" role="radiogroup" aria-label={t('settings.contentLevel')}>
+          {PACK_LEVELS.map((l) => (
+            <button key={l} type="button" role="radio" className="chip" aria-checked={status.targetLevel === l} aria-pressed={status.targetLevel === l} disabled={status.busy} onClick={() => void change(l)}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <ul className="stack" style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', gap: 6 }}>
+        {status.levels
+          .filter((l) => l.included)
+          .map((l) => (
+            <li key={l.level} className="row" style={{ justifyContent: 'space-between' }}>
+              <span>
+                <strong>{l.level}</strong>{' '}
+                <span className="faint small">
+                  {t('settings.contentCounts', { vocab: l.counts.vocab.toLocaleString(), kanji: l.counts.kanji.toLocaleString(), grammar: l.counts.grammar })} ·{' '}
+                  {l.level === 'N5' ? t('settings.contentBuiltIn') : l.bytes < 1024 * 1024 ? `${Math.max(1, Math.round(l.bytes / 1024))} KB` : `${(l.bytes / 1024 / 1024).toFixed(1)} MB`}
+                </span>
+              </span>
+              <span className={`tag${l.state === 'installed' ? ' good' : l.state === 'failed' ? ' bad' : ''}`} title={l.error}>
+                {stateLabel(l)}
+              </span>
+            </li>
+          ))}
+      </ul>
+      {failed ? (
+        <div className="row" style={{ marginTop: 8 }}>
+          <span className="faint small">{failed.error}</span>
+          <button type="button" className="btn small" disabled={status.busy} onClick={() => void desktop.retryContent().then(setLive)}>
+            {t('settings.contentRetry')}
+          </button>
+        </div>
+      ) : null}
+      <p className="faint small">{t('settings.contentUnofficial')}</p>
+    </section>
   );
 }
 
@@ -327,6 +432,7 @@ export function About() {
       <section className="panel">
         <h2>{t('about.content')}</h2>
         <p>{t('about.contentBody')}</p>
+        <p className="dim small">{t('about.contentSources')}</p>
         <p className="faint small">Pixel font: DotGothic16 (SIL Open Font License). {info ? t('about.version', { version: info.version }) : ''}</p>
       </section>
       <section className="panel stack">

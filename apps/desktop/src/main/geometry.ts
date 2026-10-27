@@ -24,6 +24,33 @@ export function clampToArea(win: Rect, area: Rect): Rect {
   };
 }
 
+/** Transparent margins between a window's edges and what is actually drawn in it. */
+export interface Insets {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Place the character window so its *visible* sprite stays inside the work
+ * area (the transparent margins may hang off-screen), snapping flush to an
+ * edge when released within `snap` pixels of it.
+ */
+export function placeWidget(win: Rect, area: Rect, insets: Insets, snap = 16): Rect {
+  const minX = area.x - insets.left;
+  const maxX = area.x + area.width - win.width + insets.right;
+  const minY = area.y - insets.top;
+  const maxY = area.y + area.height - win.height + insets.bottom;
+  let x = Math.min(Math.max(win.x, minX), maxX);
+  let y = Math.min(Math.max(win.y, minY), maxY);
+  if (x - minX <= snap) x = minX;
+  else if (maxX - x <= snap) x = maxX;
+  if (y - minY <= snap) y = minY;
+  else if (maxY - y <= snap) y = maxY;
+  return { x: Math.round(x), y: Math.round(y), width: win.width, height: win.height };
+}
+
 function overlap(a: Rect, b: Rect): number {
   const w = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
   const h = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
@@ -71,6 +98,13 @@ export function placeNear(anchor: Rect, size: { width: number; height: number },
   ];
   const fits = candidates.find((c) => c.x >= area.x && c.y >= area.y && c.x + c.width <= area.x + area.width && c.y + c.height <= area.y + area.height);
   return clampToArea(fits ?? (candidates[0] as Rect), area);
+}
+
+/** A context menu at the cursor: down-right if it fits, otherwise flipped left and/or up. */
+export function placeMenu(cursor: Point, size: { width: number; height: number }, area: Rect): Rect {
+  const x = cursor.x + size.width <= area.x + area.width ? cursor.x : cursor.x - size.width;
+  const y = cursor.y + size.height <= area.y + area.height ? cursor.y : cursor.y - size.height;
+  return clampToArea({ x, y, ...size }, area);
 }
 
 /** Default spot for the character: bottom-right of the primary work area. */

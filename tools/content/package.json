@@ -1,0 +1,21 @@
+{
+  "name": "@jc/content-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Builds the JLPT content packs from pinned open datasets (build time only).",
+  "scripts": {
+    "fetch": "tsx src/fetch.ts",
+    "build": "tsx src/build.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@jc/japanese-content": "*",
+    "@jc/shared-types": "*",
+    "@jc/shared-utils": "*",
+    "kuromoji": "0.1.2"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}

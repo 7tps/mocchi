@@ -18,7 +18,7 @@ const ALLOWED: ReadonlyArray<keyof TutorApi> = [
   'getAppState', 'getDashboard', 'beginPlacement', 'resumePlacement', 'answerPlacement', 'nextPlacement', 'finishPlacement',
   'startAsBeginner', 'completeOnboarding', 'startSession', 'answerQuestion', 'finishSession', 'dismissSession', 'updateSettings',
   'pause', 'resume', 'snooze', 'getLibrary', 'getReviewQueue', 'selectCosmetic', 'exportData', 'clearAllData', 'getSyncStatus',
-  'createAccount', 'getLinkCode', 'linkWithCode', 'syncNow', 'unlinkAccount', 'deleteAccount', 'planNotifications',
+  'createAccount', 'getLinkCode', 'linkWithCode', 'syncNow', 'unlinkAccount', 'deleteAccount', 'planNotifications', 'declineCheckIn',
 ];
 
 // Isolated profile for development and automated checks.
@@ -88,7 +88,8 @@ async function main(): Promise<void> {
     isQuizOpen: () => windows.isQuizOpen(),
     showPrompt: (takeFocus) => {
       windows.broadcast('desktop:prompt');
-      windows.showQuiz(takeFocus, '?source=scheduled');
+      // Ask first: a small "Start questions" card, not questions straight away.
+      windows.showQuiz(takeFocus, '?source=scheduled', true);
     },
     notify,
     status: (s) => windows.broadcast('desktop:scheduler', s),
@@ -142,6 +143,7 @@ async function main(): Promise<void> {
   ipcMain.handle('desktop:open-main', (_e, route?: string) => void windows.showMain(typeof route === 'string' ? route : 'main'));
   ipcMain.handle('desktop:open-quiz', (_e, source?: string) => void windows.showQuiz(true, `?source=${source === 'review' ? 'review' : 'manual'}`));
   ipcMain.handle('desktop:close-quiz', () => windows.hideQuiz());
+  ipcMain.handle('desktop:expand-quiz', () => windows.expandQuiz());
   // The placement exam is delivered like any other quiz: in the pop-up beside the corner character.
   ipcMain.handle('desktop:open-placement', () => {
     windows.hideMain();

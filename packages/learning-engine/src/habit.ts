@@ -18,7 +18,7 @@ export interface Habit {
   daysAway: number;
   /** Local days with a completed session in the last 7, today included. */
   activeDays: number;
-  /** Check-ins in the last 24 hours that were closed without finishing. */
+  /** Check-ins in the last 24 hours closed without finishing (or declined before starting). */
   skippedCheckIns: number;
   /** Human-readable explanation (English; UIs show their own i18n line). */
   reason: string;
@@ -28,6 +28,8 @@ export interface HabitInput {
   now: number;
   timeZone: string;
   sessions: ReadonlyArray<Pick<LearningSession, 'type' | 'startedAt' | 'completedAt' | 'questionCount' | 'localDate'>>;
+  /** When check-in invites were closed without starting a session. */
+  declinedCheckIns?: readonly number[];
   /** When the learner finished onboarding; a fresh start isn't "missed". */
   onboardedAt?: number;
   goalReachedToday: boolean;
@@ -54,7 +56,9 @@ export function assessHabit(i: HabitInput): Habit {
 
   // Check-ins (not self-started sessions) closed without finishing, since the last finished session.
   const prompted = i.sessions.filter((s) => (s.type === 'scheduled' || s.type === 'notification') && s.startedAt >= i.now - DAY && s.startedAt <= i.now - IN_PROGRESS_MS);
-  const skipped = prompted.filter((s) => s.completedAt === undefined && (lastDone === null || s.startedAt > lastDone)).length;
+  const sinceDone = (t: number) => lastDone === null || t > lastDone;
+  const declined = (i.declinedCheckIns ?? []).filter((t) => t >= i.now - DAY && t <= i.now && sinceDone(t)).length;
+  const skipped = prompted.filter((s) => s.completedAt === undefined && sinceDone(s.startedAt)).length + declined;
 
   const since = lastDone ?? i.onboardedAt ?? null;
   const daysSinceStudy = lastDone === null ? null : Math.floor((i.now - lastDone) / DAY);

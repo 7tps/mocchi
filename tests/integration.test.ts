@@ -437,6 +437,34 @@ describe('"I don\'t know" on kanji questions', () => {
   });
 });
 
+describe('journey: declining check-in invites', () => {
+  it('makes Mocchi sad after two, and finishing a session cheers it up', async () => {
+    const c = clock();
+    const svc = await makeService(dbFile(), c);
+    await placementAllDontKnow(svc);
+    await svc.completeOnboarding({ experience: 'none' });
+    const first = (await svc.startSession('manual'))!;
+    for (const q of first.questions) await svc.answerQuestion(first.id, q.id, answerFor(svc, first.id, q.id), 3000);
+    await svc.finishSession(first.id);
+    expect((await svc.getAppState()).habit.state).toBe('steady');
+
+    c.advance(HOUR);
+    await svc.declineCheckIn();
+    expect((await svc.getAppState()).habit.state).toBe('steady');
+    c.advance(HOUR);
+    await svc.declineCheckIn();
+    expect((await svc.getAppState()).habit).toMatchObject({ state: 'skipping', mood: 'sad', skippedCheckIns: 2 });
+    // Declining starts no session, so nothing is marked as dismissed or answered.
+    expect((await svc.getSchedulerSnapshot()).promptedQuestionsToday).toBe(0);
+
+    c.advance(MINUTE);
+    const again = (await svc.startSession('manual'))!;
+    for (const q of again.questions) await svc.answerQuestion(again.id, q.id, answerFor(svc, again.id, q.id), 3000);
+    await svc.finishSession(again.id);
+    expect((await svc.getAppState()).habit.state).not.toBe('skipping');
+  });
+});
+
 describe('journey: closing a pop-up early', () => {
   it('keeps due reviews in sessions the learner starts, and only briefly out of check-ins', async () => {
     const c = clock();

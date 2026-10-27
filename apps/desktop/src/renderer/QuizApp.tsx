@@ -45,6 +45,45 @@ function ExamDone({ result, onboarded, onClose }: { result: PlacementResult; onb
   );
 }
 
+/** Check-ins ask first: a small card, and questions only after "Start questions". */
+function Invite({ onStart, onLater, onNotNow, questions }: { onStart: () => void; onLater: () => void; onNotNow: () => void; questions: number }) {
+  const [due, setDue] = useState<number | null>(null);
+  useEffect(() => {
+    api
+      .getReviewQueue()
+      .then((q) => setDue(q.filter((e) => (e.nextReviewAt ?? Infinity) <= Date.now()).length))
+      .catch(() => setDue(0));
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') onStart();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onStart]);
+  return (
+    <div className="stack invite" style={{ gap: 8 }} role="alertdialog" aria-labelledby="invite-title">
+      <div>
+        <div id="invite-title" style={{ fontWeight: 600 }}>
+          {t('invite.title')}
+        </div>
+        <div className="dim small">{due === null ? '\u00a0' : due > 0 ? t('invite.due', { n: due, s: due === 1 ? '' : 's', q: questions }) : t('invite.new', { q: questions })}</div>
+      </div>
+      <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+        <button type="button" className="btn primary small" onClick={onStart}>
+          {t('invite.start')}
+        </button>
+        <button type="button" className="btn ghost small" onClick={onLater}>
+          {t('invite.later')}
+        </button>
+        <button type="button" className="btn ghost small" onClick={onNotNow}>
+          {t('invite.notNow')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Compact always-on-top quiz pop-up. Always closable: ✕, Esc, or snooze. */
 export function QuizApp() {
   const { state } = useAppState();
@@ -53,21 +92,29 @@ export function QuizApp() {
   const [mood, setMood] = useState<CharacterMood>('curious');
   const [snoozeOpen, setSnoozeOpen] = useState(false);
   const [examResult, setExamResult] = useState<PlacementResult | null>(null);
+  const [inviting, setInviting] = useState(() => !placement && type === 'scheduled');
   const sessionId = useRef<string | null>(null);
   const onboarded = !!state?.onboarded;
 
-  const close = useCallback(async () => {
+  /** `declined`: closing a check-in invite counts as skipping it; snoozing doesn't. */
+  const close = useCallback(async (declined = true) => {
+    if (inviting && declined) await api.declineCheckIn().catch(() => undefined);
     if (sessionId.current) await api.dismissSession(sessionId.current).catch(() => undefined);
     sessionId.current = null;
     // An unfinished exam is saved; during onboarding, bring the setup window back.
     if (placement && !onboarded) await desktop.openMain();
     await desktop.closeQuiz();
-  }, [placement, onboarded]);
+  }, [placement, onboarded, inviting]);
 
   const snooze = async (kind: SnoozeKind) => {
     await api.snooze(kind);
-    await close();
+    await close(false);
   };
+
+  const start = useCallback(async () => {
+    await desktop.expandQuiz();
+    setInviting(false);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -93,7 +140,7 @@ export function QuizApp() {
             </span>
           ) : null}
         </span>
-        {!placement ? (
+        {!placement && !inviting ? (
           <div className="menu" style={{ position: 'relative' }}>
             <button type="button" className="btn ghost small" aria-haspopup="menu" aria-expanded={snoozeOpen} onClick={() => setSnoozeOpen((v) => !v)}>
               <PixelIcon name="clock" size={14} /> {t('quiz.snooze')}
@@ -138,6 +185,8 @@ export function QuizApp() {
               }}
             />
           )
+        ) : inviting ? (
+          <Invite questions={state.settings.sessionLength} onStart={() => void start()} onLater={() => void snooze('15m')} onNotNow={() => void close()} />
         ) : (
           <SessionRunner type={type} state={state} autoFocus onMood={setMood} onClose={() => void close()} onSession={(id) => (sessionId.current = id)} />
         )}

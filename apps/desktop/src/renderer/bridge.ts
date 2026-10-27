@@ -17,6 +17,8 @@ export interface DesktopBridge {
   openMain(route?: string): Promise<void>;
   openQuiz(source?: string): Promise<void>;
   closeQuiz(): Promise<void>;
+  /** Grow the check-in invite into the full quiz pop-up. */
+  expandQuiz(): Promise<void>;
   /** Run the placement exam in the corner pop-up next to Mocchi. */
   openPlacement(): Promise<void>;
   setListening(available: boolean): Promise<void>;
@@ -131,6 +133,7 @@ const browserDesktop: DesktopBridge = {
   closeQuiz: async () => {
     location.hash = '#/main';
   },
+  expandQuiz: async () => undefined,
   openPlacement: async () => {
     location.hash = '#/quiz?mode=placement';
   },

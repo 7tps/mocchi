@@ -39,6 +39,8 @@ const WIDGET_INSETS: Insets = (() => {
 /** Fixed-size widget rect at a position. */
 const widgetAt = (x: number, y: number): Rect => ({ x: Math.round(x), y: Math.round(y), ...WIDGET_SIZE });
 export const QUIZ_SIZE = { width: 400, height: 470 };
+/** Check-ins first appear as this small "Start questions" card, then grow into the quiz. */
+export const INVITE_SIZE = { width: 340, height: 168 };
 
 const isMac = process.platform === 'darwin';
 
@@ -81,6 +83,8 @@ const prefs = () => ({
 export class WindowManager {
   widget: BrowserWindow | null = null;
   quiz: BrowserWindow | null = null;
+  /** The quiz window is showing the check-in invite (small), not questions yet. */
+  private quizInvite = false;
   main: BrowserWindow | null = null;
   private menu: BrowserWindow | null = null;
   private menuAt: { x: number; y: number } | null = null;
@@ -182,9 +186,22 @@ export class WindowManager {
     return placeNear(anchor, QUIZ_SIZE, screen.getDisplayMatching(anchor).workArea);
   }
 
-  /** Show the quiz pop-up above other windows. Focus is taken only if the user allows it. */
-  showQuiz(takeFocus: boolean, query = ''): BrowserWindow {
-    const r = this.quizRect();
+  private inviteRect(): Rect {
+    if (this.state.quizMoved && this.state.quiz) {
+      const r = { x: this.state.quiz.x, y: this.state.quiz.y, ...INVITE_SIZE };
+      return restoreRect(r, r, workAreas());
+    }
+    const anchor = this.widget && !this.widget.isDestroyed() && this.widget.isVisible() ? this.widget.getBounds() : defaultWidgetRect(screen.getPrimaryDisplay().workArea, WIDGET_SIZE);
+    return placeNear(anchor, INVITE_SIZE, screen.getDisplayMatching(anchor).workArea);
+  }
+
+  /**
+   * Show the quiz pop-up above other windows. Focus is taken only if the user allows it.
+   * With `invite`, it opens as a small card that asks before any questions appear.
+   */
+  showQuiz(takeFocus: boolean, query = '', invite = false): BrowserWindow {
+    this.quizInvite = invite;
+    const r = invite ? this.inviteRect() : this.quizRect();
     if (this.quiz && !this.quiz.isDestroyed()) {
       this.quiz.setBounds(r);
       loadRoute(this.quiz, `quiz${query}`);
@@ -220,7 +237,8 @@ export class WindowManager {
       } else win.showInactive();
     });
     win.on('moved', () => {
-      this.state.quiz = win.getBounds();
+      // Remember where the quiz goes; a moved invite keeps its position but not its small size.
+      this.state.quiz = this.quizInvite ? { ...win.getBounds(), ...QUIZ_SIZE } : win.getBounds();
       this.state.quizMoved = true;
       saveWindowState(this.state);
     });
@@ -283,6 +301,13 @@ export class WindowManager {
     const w = this.menu;
     this.menu = null;
     if (w && !w.isDestroyed()) w.close();
+  }
+
+  /** The learner chose to start: grow the invite into the full quiz. */
+  expandQuiz(): void {
+    if (!this.quiz || this.quiz.isDestroyed() || !this.quizInvite) return;
+    this.quizInvite = false;
+    this.quiz.setBounds(this.quizRect());
   }
 
   hideQuiz(): void {

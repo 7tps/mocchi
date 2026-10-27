@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('desktop', {
   openMain: (route?: string) => ipcRenderer.invoke('desktop:open-main', route),
   openQuiz: (source?: string) => ipcRenderer.invoke('desktop:open-quiz', source),
   closeQuiz: () => ipcRenderer.invoke('desktop:close-quiz'),
+  expandQuiz: () => ipcRenderer.invoke('desktop:expand-quiz'),
   openPlacement: () => ipcRenderer.invoke('desktop:open-placement'),
   setListening: (available: boolean) => ipcRenderer.invoke('desktop:set-listening', available),
   saveExport: (json: string) => ipcRenderer.invoke('desktop:save-export', json) as Promise<string | null>,

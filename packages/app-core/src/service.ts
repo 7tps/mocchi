@@ -278,6 +278,7 @@ export class TutorService implements TutorApi {
       now,
       timeZone: this.tz(),
       sessions: await this.store.getSessions({ since: now - 8 * DAY }),
+      declinedCheckIns: (await this.store.getMeta<number[]>('declinedCheckIns')) ?? [],
       onboardedAt: this.profile?.onboardedAt,
       goalReachedToday: goal > 0 && (await this.questionsOn(this.today())) >= goal,
     });
@@ -627,6 +628,13 @@ export class TutorService implements TutorApi {
       await this.finishSessionQuietly(active);
     }
     this.emit('dismissed');
+  }
+
+  async declineCheckIn(): Promise<void> {
+    const now = this.now();
+    const recent = ((await this.store.getMeta<number[]>('declinedCheckIns')) ?? []).filter((t) => t > now - 2 * DAY);
+    await this.store.setMeta('declinedCheckIns', [...recent, now].slice(-50));
+    this.emit('declined');
   }
 
   private async finishSessionQuietly(active: ActiveSession): Promise<void> {

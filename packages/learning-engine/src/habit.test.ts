@@ -36,6 +36,15 @@ describe('assessHabit', () => {
     expect(habit([...closed, done(NOW - 30 * MINUTE)]).state).toBe('steady');
   });
 
+  it('counts check-in invites closed before starting', () => {
+    const sessions = [done(NOW - 5 * HOUR)];
+    const declined = (times: number[]) => assessHabit({ now: NOW, timeZone: TZ, sessions, goalReachedToday: false, onboardedAt: NOW - 30 * DAY, declinedCheckIns: times });
+    expect(declined([NOW - 2 * HOUR, NOW - HOUR])).toMatchObject({ state: 'skipping', mood: 'sad', skippedCheckIns: 2 });
+    // Declines before the last finished session, or over a day old, don't count.
+    expect(declined([NOW - 6 * HOUR, NOW - HOUR]).state).toBe('steady');
+    expect(declined([NOW - 2 * DAY, NOW - HOUR]).state).toBe('steady');
+  });
+
   it('does not count a fresh start as missed', () => {
     expect(habit([], { onboardedAt: NOW - HOUR })).toMatchObject({ state: 'new', daysSinceStudy: null });
     expect(habit([], { onboardedAt: NOW - 5 * DAY })).toMatchObject({ state: 'away', daysAway: 5 });

@@ -170,6 +170,8 @@ export interface TutorApi {
   answerQuestion(sessionId: string, questionId: string, response: string | string[], latencyMs?: number, meta?: AnswerMeta): Promise<AnswerFeedback>;
   finishSession(sessionId: string): Promise<SessionSummary>;
   dismissSession(sessionId: string): Promise<void>;
+  /** A check-in invite was closed without starting (counts for Mocchi's mood, like a closed check-in). */
+  declineCheckIn(): Promise<void>;
   updateSettings(patch: Partial<UserSettings>): Promise<UserSettings>;
   pause(kind: PauseKind): Promise<PauseState>;
   resume(): Promise<PauseState>;

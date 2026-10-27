@@ -276,9 +276,9 @@ export function QuestionCard({ question: q, feedback, onSubmit, onContinue, cont
       ) : null}
 
       {feedback ? (
-        <div className={`feedback ${feedback.skipped ? '' : feedback.correct ? 'good' : 'bad'}`} role="status" aria-live="polite">
+        <div className={`feedback ${feedback.skipped || feedback.dontKnow ? '' : feedback.correct ? 'good' : 'bad'}`} role="status" aria-live="polite">
           <div className="row spread">
-            <span className="verdict">{feedback.skipped ? t('quiz.skippedKanji') : feedback.correct ? t('quiz.correct') : t('quiz.incorrect')}</span>
+            <span className="verdict">{feedback.skipped ? t('quiz.skippedKanji') : feedback.dontKnow ? t('quiz.dontKnowVerdict') : feedback.correct ? t('quiz.correct') : t('quiz.incorrect')}</span>
             {feedback.note ? <span className="dim small jp">{feedback.note}</span> : null}
           </div>
           {!feedback.correct ? (

@@ -397,6 +397,46 @@ describe('reading reveals in sessions', () => {
   });
 });
 
+describe('"I don\'t know" on kanji questions', () => {
+  it('records a miss without a guess and shows the answer', async () => {
+    const c = clock();
+    const path = dbFile();
+    const svc = await makeService(path, c);
+    let view = await svc.beginPlacement('intermediate');
+    while (!view.finished && view.question) {
+      const cur = (svc as unknown as { placementState: { current: { answer: string; difficulty: number } } }).placementState.current;
+      await svc.answerPlacement(cur.difficulty <= 4 ? cur.answer : null);
+      view = await svc.nextPlacement();
+    }
+    await svc.finishPlacement();
+    await svc.completeOnboarding({});
+    const kanji = async () => (await svc.getDashboard()).stats.skills.find((x) => x.skill === 'kanji')!.ability;
+    let itemId: string | null = null;
+    for (let round = 0; round < 10 && !itemId; round++) {
+      const s = (await svc.startSession('manual', { length: 5 }))!;
+      for (const q of s.questions) {
+        if (!itemId && q.skill === 'kanji' && q.mode === 'choice') {
+          const before = await kanji();
+          const fb = await svc.answerQuestion(s.id, q.id, '', undefined, { dontKnow: true });
+          expect(fb.correct).toBe(false);
+          expect(fb.dontKnow).toBe(true);
+          expect(fb.whyWrong).toBeUndefined();
+          expect(fb.answer).toBeTruthy();
+          expect(await kanji()).toBeLessThan(before);
+          itemId = q.itemId;
+        } else await svc.answerQuestion(s.id, q.id, answerFor(svc, s.id, q.id));
+      }
+      await svc.finishSession(s.id);
+      c.advance(HOUR);
+    }
+    expect(itemId).not.toBeNull();
+    const restarted = await makeService(path, c);
+    const attempts = JSON.parse(await restarted.exportData()).attempts as Array<{ itemId: string; dontKnow?: boolean; response: string; correct: boolean }>;
+    const miss = attempts.find((a) => a.itemId === itemId && a.dontKnow);
+    expect(miss).toMatchObject({ response: '', correct: false });
+  });
+});
+
 describe('journey: closing a pop-up early', () => {
   it('keeps due reviews in sessions the learner starts, and only briefly out of check-ins', async () => {
     const c = clock();

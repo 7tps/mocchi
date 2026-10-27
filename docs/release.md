@@ -9,7 +9,7 @@
 
 ## JLPT level packs (must be published before the installer can download N4–N1)
 
-- The installer ships N5 and `manifest.json`; N4–N1 are downloaded from `https://github.com/7tps/mocchi/releases/download/content-<CONTENT_PACK_VERSION>/` (constant in `packages/japanese-content/src/packs.ts`). Until that release exists, setup reports that the content couldn't be downloaded and the app retries on each start (Settings › Study content › Try again).
+- The installer ships N5 and `manifest.json`; N4–N1 are downloaded from `https://github.com/7tps/mocchi/releases/download/content-<CONTENT_PACK_VERSION>/` (constant in `packages/japanese-content/src/packs.ts`). `content-2026.10.1` is published. If a release is ever missing or unreachable, setup reports that the content couldn't be downloaded and the app retries on each start (Settings › Study content › Try again).
 - Publish (from the repo root, after `npm run content:build`):
   `gh release create content-2026.10.1 dist/content/jlpt-n4.json.gz dist/content/jlpt-n3.json.gz dist/content/jlpt-n2.json.gz dist/content/jlpt-n1.json.gz dist/content/manifest.json dist/content/ATTRIBUTION.txt --repo 7tps/mocchi --title "Content packs 2026.10.1"`
 - The app accepts a pack only if its SHA-256 matches the manifest bundled in the build, so a release's packs must come from the same `content:build` as the installer. Changing pack contents → bump `CONTENT_PACK_VERSION`, rebuild, publish a new release, rebuild the installer.

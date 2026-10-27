@@ -90,6 +90,8 @@ export const en = {
   'onboard.results.kanjiBlocked': 'not measured — the kanji got in the way',
   'settings.interruptionsHint': 'Sessions you start by clicking Mocchi are extra practice and never count toward these limits.',
   'quiz.skippedKanji': 'Skipped — kanji',
+  'quiz.dontKnow': 'I don’t know',
+  'quiz.dontKnowVerdict': 'Here’s the answer',
   'quiz.check': 'Check',
   'quiz.next': 'Next',
   'quiz.finish': 'Finish',

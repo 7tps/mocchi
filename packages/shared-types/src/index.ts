@@ -205,6 +205,8 @@ export interface AnswerMeta {
   readingShown?: boolean;
   /** The learner said they could not read the kanji (placement only). */
   cantReadKanji?: boolean;
+  /** The learner chose "I don't know" instead of guessing (counts as a miss). */
+  dontKnow?: boolean;
 }
 
 export interface AnswerCheck {
@@ -275,6 +277,8 @@ export interface QuizAttempt {
   /** Reading was revealed: replay applies the same kanji-skill penalty. */
   readingShown?: boolean;
   kanjiDifficulty?: number;
+  /** "I don't know" instead of an answer (recorded as incorrect). */
+  dontKnow?: boolean;
   answeredAt: number;
   deviceId: string;
   /** Hybrid logical clock stamp used to order events across devices. */

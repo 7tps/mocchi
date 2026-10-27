@@ -1,5 +1,6 @@
 import {
   SCHEMA_VERSION,
+  type AnswerCheck,
   type AnswerMeta,
   type CharacterProgress,
   type ExperienceLevel,
@@ -120,6 +121,7 @@ const DISMISS_COOLDOWN_MS = 30 * MINUTE;
 
 const REVEAL_NOTE = 'Reading shown: this counts toward kanji practice, not against this skill.';
 const KANJI_NOTE = 'Noted as kanji to work on. It does not count against the skill being tested.';
+const DONT_KNOW_NOTE = 'No guess needed — this one comes back soon.';
 
 export function publicQuestion(q: Question): PublicQuestion {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -348,6 +350,7 @@ export class TutorService implements TutorApi {
       example: q.example,
       whyWrong,
       skipped: meta.cantReadKanji || undefined,
+      dontKnow: (response === null && !meta.cantReadKanji) || undefined,
       note: meta.cantReadKanji ? KANJI_NOTE : meta.readingShown && q.kanjiDifficulty !== undefined ? REVEAL_NOTE : undefined,
       mood: correct ? 'happy' : 'encouraging',
     };
@@ -477,7 +480,9 @@ export class TutorService implements TutorApi {
     const planned = active.plan.find((p) => p.question.id === questionId);
     if (!planned) throw new Error('Unknown question.');
     const q = planned.question;
-    const check = checkAnswer(q, response);
+    // "I don't know" is a miss without a guess: same skill/SRS update as a wrong answer.
+    const dontKnow = !!meta.dontKnow;
+    const check: AnswerCheck = dontKnow ? { correct: false, normalizedResponse: '' } : checkAnswer(q, response);
     const now = this.now();
     const revealed = !!meta.readingShown && q.kanjiDifficulty !== undefined && q.skill !== 'kanji';
     if (!active.answered.has(questionId)) {
@@ -492,8 +497,9 @@ export class TutorService implements TutorApi {
         mode: q.mode,
         skill: q.skill,
         difficulty: q.difficulty,
-        response: Array.isArray(response) ? response.join(' ') : response.slice(0, 200),
+        response: dontKnow ? '' : Array.isArray(response) ? response.join(' ') : response.slice(0, 200),
         correct: check.correct,
+        dontKnow: dontKnow || undefined,
         latencyMs: latencyMs !== undefined ? Math.round(Math.min(latencyMs, 600_000)) : undefined,
         readingShown: revealed || undefined,
         kanjiDifficulty: revealed ? q.kanjiDifficulty : undefined,
@@ -517,13 +523,14 @@ export class TutorService implements TutorApi {
     const line = lineFor(check.correct ? 'correct' : 'incorrect', now);
     return {
       correct: check.correct,
-      note: [check.note ?? (check.correct ? line.ja : undefined), revealed ? REVEAL_NOTE : undefined].filter(Boolean).join(' ') || undefined,
+      note: dontKnow ? DONT_KNOW_NOTE : [check.note ?? (check.correct ? line.ja : undefined), revealed ? REVEAL_NOTE : undefined].filter(Boolean).join(' ') || undefined,
       answer: q.answer,
       accepted: q.accepted,
       explanation: q.explanation,
       example: q.example,
-      whyWrong: explainWrong(q, response, check),
-      mood: moodFor(check.correct ? 'correct' : 'incorrect'),
+      dontKnow: dontKnow || undefined,
+      whyWrong: dontKnow ? undefined : explainWrong(q, response, check),
+      mood: dontKnow ? 'encouraging' : moodFor(check.correct ? 'correct' : 'incorrect'),
       status: p?.status ?? 'learning',
       nextReviewAt: p?.nextReviewAt ?? now,
       reason: planned.reason,

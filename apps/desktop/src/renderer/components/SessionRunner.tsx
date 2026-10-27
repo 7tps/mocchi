@@ -71,7 +71,7 @@ export function SessionRunner({ type, reviewOnly, state, autoFocus, onMood, onCl
 
   const q = session.questions[index];
 
-  const submit = async (response: string | string[], latencyMs: number, meta: AnswerMeta) => {
+  const submit = async (response: string | string[], latencyMs: number | undefined, meta: AnswerMeta) => {
     if (!q) return;
     setBusy(true);
     try {
@@ -79,7 +79,7 @@ export function SessionRunner({ type, reviewOnly, state, autoFocus, onMood, onCl
       setFeedback(fb);
       setResults((r) => [...r, fb.correct]);
       onMood(fb.mood);
-      if (sound) playSfx(fb.correct ? 'correct' : 'wrong');
+      if (sound && !fb.dontKnow) playSfx(fb.correct ? 'correct' : 'wrong');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -178,6 +178,13 @@ export function SessionRunner({ type, reviewOnly, state, autoFocus, onMood, onCl
         showTranslations={state.settings.showTranslations}
         autoFocus={autoFocus}
         reason={feedback?.reason}
+        extra={
+          q.skill === 'kanji' && q.mode === 'choice' ? (
+            <button type="button" className="btn ghost small" onClick={() => void submit('', undefined, { dontKnow: true })} disabled={busy}>
+              {t('quiz.dontKnow')}
+            </button>
+          ) : undefined
+        }
       />
     </div>
   );

@@ -216,8 +216,8 @@ export function QuestionView({ theme, question: q, feedback, busy, onSubmit, onC
       ) : null}
 
       {feedback ? (
-        <View accessibilityLiveRegion="polite" style={{ borderWidth: 2, borderColor: feedback.skipped ? theme.border : feedback.correct ? theme.good : theme.bad, backgroundColor: theme.surface, padding: 12, gap: 6 }}>
-          <Text style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: feedback.skipped ? theme.textDim : feedback.correct ? theme.good : theme.bad }}>{feedback.skipped ? t('quiz.skippedKanji') : feedback.correct ? t('quiz.correct') : t('quiz.incorrect')}</Text>
+        <View accessibilityLiveRegion="polite" style={{ borderWidth: 2, borderColor: feedback.skipped || feedback.dontKnow ? theme.border : feedback.correct ? theme.good : theme.bad, backgroundColor: theme.surface, padding: 12, gap: 6 }}>
+          <Text style={{ fontFamily: FONT_DISPLAY, fontSize: 18, color: feedback.skipped || feedback.dontKnow ? theme.textDim : feedback.correct ? theme.good : theme.bad }}>{feedback.skipped ? t('quiz.skippedKanji') : feedback.dontKnow ? t('quiz.dontKnowVerdict') : feedback.correct ? t('quiz.correct') : t('quiz.incorrect')}</Text>
           {feedback.note ? <Body theme={theme} dim small>{feedback.note}</Body> : null}
           {!feedback.correct ? (
             <Text style={{ color: theme.text, fontSize: 20 }}>
@@ -324,14 +324,14 @@ export function SessionRunner({ theme, state, type, reviewOnly, onMood, onClose 
   if (!q) return null;
   const last = index + 1 >= session.questions.length;
 
-  const submit = async (response: string | string[], latencyMs: number, meta: AnswerMeta) => {
+  const submit = async (response: string | string[], latencyMs: number | undefined, meta: AnswerMeta) => {
     setBusy(true);
     try {
       const fb = await svc.answerQuestion(session.id, q.id, response, latencyMs, meta);
       setFeedback(fb);
       setResults((r) => [...r, fb.correct]);
       onMood(fb.mood);
-      if (haptics) void Haptics.notificationAsync(fb.correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning);
+      if (haptics && !fb.dontKnow) void Haptics.notificationAsync(fb.correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning);
     } finally {
       setBusy(false);
     }
@@ -369,6 +369,7 @@ export function SessionRunner({ theme, state, type, reviewOnly, onMood, onClose 
         showRomaji={state.settings.showRomaji}
         showTranslations={state.settings.showTranslations}
         reason={feedback?.reason}
+        extra={q.skill === 'kanji' && q.mode === 'choice' ? <Button theme={theme} variant="ghost" label={t('quiz.dontKnow')} onPress={() => void submit('', undefined, { dontKnow: true })} disabled={busy} /> : undefined}
       />
     </View>
   );

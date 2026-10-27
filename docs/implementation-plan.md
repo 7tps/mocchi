@@ -5,9 +5,10 @@ Last updated: 2026-10-27. See also `CLAUDE.md` (architecture, commands, conventi
 ## Current state
 
 - **Phase:** pre-release (phase 7). JLPT N5–N1 level packs and the Windows installer with a level picker are built (phase 8, below).
-- **Git:** `980d4f2 initial commit` on `main`; everything since (docs, level packs, installer) is **uncommitted**.
-- **Checks:** `npm run check` passes (lint, typecheck of 10 workspaces, 124 tests). `npm run package:win` builds `Mocchi-Setup-0.1.0.exe`.
-- **Exact next task:** publish the `content-2026.10.1` GitHub release (command in `docs/release.md`) so the installer's N4–N1 downloads work, then click through the interactive installer once (the level page has been compiled but not seen). After that: more level grammar (see "Unfinished").
+- **Git:** `main` on `origin` (7tps/mocchi); level packs, installer and desktop fixes are in `e2c45e7`.
+- **Checks:** `npm run check` passes (lint, typecheck of 10 workspaces, 130 tests). `npm run package:win` builds `Mocchi-Setup-0.1.0.exe`.
+- **Content release:** `content-2026.10.1` is published on 7tps/mocchi (2026-10-27). A silent install of the release installer with `/LEVEL=N2` downloaded N4–N2 from it with matching checksums.
+- **Exact next task:** click through the interactive installer once (the level page has been compiled but not seen). After that: more level grammar (see "Unfinished").
 
 ## Environment findings
 
@@ -125,12 +126,12 @@ Last updated: 2026-10-27. See also `CLAUDE.md` (architecture, commands, conventi
 - No code signing or store submission. No rate limiting or Postgres option on the sync server. No recorded audio.
 - **Grammar coverage is far short of N1.** There are 114 grammar points (N5 16, N4 39, N3 24, N2 18, N1 17, including bundled ones); full N4–N1 coverage needs roughly 600. There are only 10 reading passages; N1-level reading and listening practice needs many more passages and recorded audio. Vocabulary and kanji coverage of the community lists is essentially complete.
 - **Example-sentence readings are machine-generated** (kuromoji/IPADIC) and occasionally wrong (e.g. 指一本 → ゆびいちほん). Meanings are terse JMdict glosses, not hand-written explanations.
-- **The `content-2026.10.1` release is not published.** Until it is, the release installer can't download N4–N1; it says so, and the app retries. The interactive installer page has not been seen; only silent installs were tested. The installer is unsigned (SmartScreen warning).
+- The interactive installer page has not been seen; only silent installs were tested. The installer is unsigned (SmartScreen warning).
 - **Mobile doesn't use level packs** (bundled curriculum only).
 
 ## Next steps
 
-1. Publish the content release; click through the interactive installer; commit.
+1. Click through the interactive installer.
 2. Write more level grammar (≈20–40 points per level per batch, with inline why-not notes) and reading passages; review the generated readings of the most frequent sentences.
 3. Load level packs on mobile (bundle N5, download the others like desktop).
 4. Run the mobile app on Android and iOS devices; verify notification timing, tap routing and the Japanese keyboard.

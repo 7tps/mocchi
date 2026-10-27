@@ -47,7 +47,7 @@ Working notes for continuing development. Architecture: `docs/architecture.md`. 
 
 ## Known issues / open bugs
 
-- Release `content-2026.10.1` is not published, so the release installer's N4–N1 downloads fail. This is handled: setup shows a message and the app retries. The interactive installer page hasn't been seen.
+- The interactive installer page hasn't been seen (only silent installs were tested). Release `content-2026.10.1` was published 2026-10-27; with `gh` missing, it was created through the GitHub REST API using the token Git Credential Manager already stores (never printed).
 - Example readings from kuromoji can be wrong. JMdict glosses can be terse, or list a less common sense second.
 - `typedMeaningNotes`/`typedJapaneseNotes` now scan about 10,000 items per typed question. That is still fast (≈0.2 ms per answer), but builds a large notes map in memory for each typed question.
 - None failing in tests. Behaviours not yet verified live:

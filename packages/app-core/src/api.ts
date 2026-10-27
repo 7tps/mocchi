@@ -60,6 +60,8 @@ export interface Feedback {
   explanation: string;
   /** Skipped because the kanji couldn't be read (placement): not a wrong answer. */
   skipped?: boolean;
+  /** The learner said they didn't know: shown as the answer, not a mistake. */
+  dontKnow?: boolean;
   /** Why the learner's own answer is wrong (absent when correct). */
   whyWrong?: string;
   example?: ExampleSentence;
